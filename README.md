@@ -1,0 +1,1 @@
+# HotSeatAI-HackDay-2026-GDG_VU
