@@ -165,29 +165,27 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables (`.env` or Infisical Secret Sync)
-You can pull secrets directly from **Infisical** or copy `.env.example` to `.env`:
+### 3. Configure Environment Variables (`.env` / Cloudflare Secrets)
+Copy `.env.example` to `.env` (for local execution) or add your variables directly under **Cloudflare Dashboard → Workers & Pages → `hotseatai-hackday-2026-gdg-vu` → Settings → Variables and Secrets** (or sync via Infisical):
 ```bash
-# Option A: Pull secrets from Infisical into .env
-infisical export --format=dotenv > .env
-
-# Option B: Run FastAPI directly with Infisical injected environment variables
-infisical run -- uvicorn app:app --reload --host 0.0.0.0 --port 8000
-
-# Option C: Manual .env copy
 cp .env.example .env
 ```
 
-Key variables in `.env`:
-```ini
-GEMINI_API_KEY="your_google_ai_studio_api_key"
-GEMMA_MODEL_ID="gemma-4-26b-a4b-it"
-GEMMA_FALLBACK_MODELS="gemma-4-26b-a4b-it,gemma-4-31b-it"
-OLLAMA_URL="http://127.0.0.1:11434/api/chat"
-OLLAMA_MODEL="gemma4:12b"
-LMSTUDIO_URL="http://127.0.0.1:1234/v1/chat/completions"
-LMSTUDIO_MODEL="gemma-4-12b-it"
-```
+All environment variables are resolved via `resolveEnvConfig()` in [`worker.js`](./worker.js) and `_clean_env()` in [`engine.py`](./engine.py) / [`app.py`](./app.py) with automatic quote-stripping and `||` fallback defaults:
+
+| Variable | Default (`\|\|` Fallback) | Description |
+| :--- | :--- | :--- |
+| `GEMINI_API_KEY` | *(Required for Gemini API)* | Google AI Studio API key (UI override takes precedence, then `.env` / Cloudflare Secret) |
+| `GEMMA_MODEL_ID` | `gemma-4-26b-a4b-it` | Primary Gemma 4 multimodal model on Gemini API |
+| `GEMMA_FALLBACK_MODELS` | `gemma-4-26b-a4b-it,gemma-4-31b-it,gemma-3-27b-it` | Comma-separated model cascade |
+| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Local Ollama host URL |
+| `OLLAMA_URL` | `http://127.0.0.1:11434/api/chat` | Local Ollama chat endpoint |
+| `OLLAMA_MODEL` | `gemma4:12b` | Default local open-weight Ollama model tag |
+| `OLLAMA_KEEP_ALIVE` | `30m` | Memory residency duration for Ollama |
+| `LMSTUDIO_URL` | `http://127.0.0.1:1234/v1/chat/completions` | Local LM Studio OpenAI-compatible endpoint |
+| `LMSTUDIO_MODEL` | `gemma-4-12b-it` | Default local LM Studio model identifier |
+| `PORT` | `8000` | Local FastAPI server port |
+| `HOST` | `0.0.0.0` | Local FastAPI bind address |
 
 ### 4. Start the FastAPI Diligence Server
 ```bash
@@ -201,13 +199,13 @@ python -m graphify update .
 GRAPHIFY_BACKEND=none graphify cluster-only .
 ```
 
-### 6. Cloudflare Workers Edge Deployment, Infisical Secret Sync & Observability (`https://hotseat-ai.ojasdeshpande.in/`)
-HotSeat AI includes a zero-dependency Cloudflare Workers edge runtime ([`worker.js`](./worker.js) & [`wrangler.toml`](./wrangler.toml)) deployed as Worker Script **`hotseatai-hackday-2026-gdg-vu`**. It serves `./static` via Cloudflare's `ASSETS` binding and executes the complete Gemma 4 multimodal API (`/health`, `/api/ping`, `/api/state`, `/api/reset`, `/api/interrogate`, `/api/verdict`, `/api/skill`) at the edge on **`https://hotseat-ai.ojasdeshpande.in/`**.
+### 6. Cloudflare Workers Edge Deployment & Observability (`https://hotseat-ai.ojasdeshpande.in/`)
+HotSeat AI includes a zero-dependency Cloudflare Workers edge runtime ([`worker.js`](./worker.js) & [`wrangler.toml`](./wrangler.toml)) deployed as Worker Script **`hotseatai-hackday-2026-gdg-vu`**. It serves `./static` via Cloudflare's `ASSETS` binding (protected by [`.assetsignore`](./.assetsignore) and [`static/.assetsignore`](./static/.assetsignore)) and executes the complete Gemma 4 multimodal API (`/health`, `/api/ping`, `/api/state`, `/api/reset`, `/api/interrogate`, `/api/verdict`, `/api/skill`) at the edge on **`https://hotseat-ai.ojasdeshpande.in/`**.
 
-- **Infisical → Cloudflare Workers Secret Sync Configuration:**
-  - **Worker Script Name / ID:** `hotseatai-hackday-2026-gdg-vu` (matches `name = "hotseatai-hackday-2026-gdg-vu"` in [`wrangler.toml`](./wrangler.toml) with `keep_vars = true` so synced Infisical secrets are never overwritten on deploy).
+- **Cloudflare Variables & Secrets (`keep_vars = true`):**
+  - **Worker Script Name:** `hotseatai-hackday-2026-gdg-vu`
   - **Entrypoint File:** `worker.js`
-  - *Note:* Ensure the Worker `hotseatai-hackday-2026-gdg-vu` has been created/deployed at least once on Cloudflare before creating the Infisical Cloudflare Workers Secret Sync so Infisical can discover the script via the Cloudflare API.
+  - Add `GEMINI_API_KEY` (and any optional overrides from `.env`) in **Cloudflare Dashboard → Workers & Pages → `hotseatai-hackday-2026-gdg-vu` → Settings → Variables and Secrets**. `keep_vars = true` in [`wrangler.toml`](./wrangler.toml) preserves all dashboard secrets across deployments, and `resolveEnvConfig()` automatically falls back to built-in defaults (`||`) for any omitted optional variable.
 - **Full Observability & Distributed Tracing (`wrangler.toml`):**
   Configured with `head_sampling_rate = 1` (100% sampling) across `[observability]`, `[observability.logs]` (`invocation_logs = true`, `persist = true`), and `[observability.traces]` (`enabled = true`, `persist = true`), alongside Google Analytics (`gtag.js` `G-S90HKXEG0Z`) in [`static/index.html`](./static/index.html).
 - **Deploy to Cloudflare Workers:**

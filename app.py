@@ -759,6 +759,9 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 #  Dev Server Entry Point
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 if __name__ == "__main__":
+    import os
     import uvicorn
 
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    host = (os.environ.get("HOST") or "0.0.0.0").strip().strip("\"'") or "0.0.0.0"
+    port = int((os.environ.get("PORT") or "8000").strip().strip("\"'") or "8000")
+    uvicorn.run("app:app", host=host, port=port, reload=True)

@@ -47,6 +47,65 @@ function clamp(val, lo, hi) {
   return Math.max(lo, Math.min(hi, val));
 }
 
+function cleanEnvValue(val) {
+  return String(val || '')
+    .trim()
+    .replace(/^["']+|["']+$/g, '')
+    .trim();
+}
+
+/**
+ * Resolve every .env / Cloudflare Secret variable with `||` fallback defaults
+ */
+function resolveEnvConfig(env = {}, overrides = {}) {
+  const geminiApiKey =
+    cleanEnvValue(overrides.apiKey) ||
+    cleanEnvValue(env.GEMINI_API_KEY) ||
+    '';
+  const gemmaModelId =
+    cleanEnvValue(env.GEMMA_MODEL_ID) || 'gemma-4-26b-a4b-it';
+  const gemmaFallbackModels =
+    cleanEnvValue(env.GEMMA_FALLBACK_MODELS) ||
+    'gemma-4-26b-a4b-it,gemma-4-31b-it,gemma-3-27b-it';
+
+  const ollamaHost =
+    cleanEnvValue(env.OLLAMA_HOST) || 'http://127.0.0.1:11434';
+  const ollamaUrl =
+    cleanEnvValue(env.OLLAMA_URL) ||
+    `${ollamaHost.replace(/\/$/, '')}/api/chat`;
+  const ollamaModel =
+    cleanEnvValue(overrides.ollamaModel) ||
+    cleanEnvValue(env.OLLAMA_MODEL) ||
+    'gemma4:12b';
+  const ollamaKeepAlive =
+    cleanEnvValue(env.OLLAMA_KEEP_ALIVE) || '30m';
+
+  const lmstudioUrl =
+    cleanEnvValue(env.LMSTUDIO_URL) ||
+    'http://127.0.0.1:1234/v1/chat/completions';
+  const lmstudioModel =
+    cleanEnvValue(overrides.ollamaModel) ||
+    cleanEnvValue(env.LMSTUDIO_MODEL) ||
+    'gemma-4-12b-it';
+
+  const port = parseInt(cleanEnvValue(env.PORT) || '8000', 10) || 8000;
+  const host = cleanEnvValue(env.HOST) || '0.0.0.0';
+
+  return {
+    geminiApiKey,
+    gemmaModelId,
+    gemmaFallbackModels,
+    ollamaHost,
+    ollamaUrl,
+    ollamaModel,
+    ollamaKeepAlive,
+    lmstudioUrl,
+    lmstudioModel,
+    port,
+    host,
+  };
+}
+
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -253,14 +312,15 @@ function compileSkillMd() {
  * Call Gemma 4 via Google Gemini REST API with multimodal image part BEFORE text prompt
  */
 async function callGeminiCascade(prompt, imageBase64, mimeType, apiKey, env) {
-  if (!apiKey) {
+  const cfg = resolveEnvConfig(env, { apiKey });
+  if (!cfg.geminiApiKey) {
     throw new Error('GEMINI_API_KEY is missing in Cloudflare Worker secrets/environment.');
   }
 
-  const primary = (env.GEMMA_MODEL_ID || 'gemma-4-26b-a4b-it').trim();
-  const fallbacks = (env.GEMMA_FALLBACK_MODELS || '')
+  const primary = cfg.gemmaModelId;
+  const fallbacks = cfg.gemmaFallbackModels
     .split(',')
-    .map((s) => s.trim())
+    .map((s) => cleanEnvValue(s))
     .filter(Boolean);
   const cascade = Array.from(new Set([primary, ...fallbacks, ...CLOUD_CASCADE]));
 
@@ -343,10 +403,15 @@ async function callGeminiCascade(prompt, imageBase64, mimeType, apiKey, env) {
 /**
  * Ping provider connectivity & measure round-trip latency
  */
-async function pingProvider(provider, apiKey, env) {
+async function pingProvider(provider, apiKey, env, ollamaModelOverride = '') {
+  const cfg = resolveEnvConfig(env, {
+    apiKey,
+    ollamaModel: ollamaModelOverride,
+  });
+
   if (provider === 'gemini_api') {
-    const modelId = (env.GEMMA_MODEL_ID || 'gemma-4-26b-a4b-it').trim();
-    if (!apiKey) {
+    const modelId = cfg.gemmaModelId;
+    if (!cfg.geminiApiKey) {
       return {
         provider: 'gemini_api',
         ok: false,
@@ -359,7 +424,7 @@ async function pingProvider(provider, apiKey, env) {
       const startT = Date.now();
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
         modelId
-      )}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      )}:generateContent?key=${encodeURIComponent(cfg.geminiApiKey)}`;
       const resp = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -395,11 +460,10 @@ async function pingProvider(provider, apiKey, env) {
     return {
       provider: 'ollama',
       ok: false,
-      model_id: 'gemma4:12b',
-      endpoint: 'http://127.0.0.1:11434/api/chat',
+      model_id: cfg.ollamaModel,
+      endpoint: cfg.ollamaUrl,
       latency_ms: null,
-      error:
-        'Local Ollama (127.0.0.1:11434) is unreachable from Cloudflare Edge runtime. Run locally or use Gemini API.',
+      error: `Local Ollama (${cfg.ollamaUrl}) is unreachable from Cloudflare Edge runtime. Run locally or use Gemini API.`,
     };
   }
 
@@ -407,11 +471,10 @@ async function pingProvider(provider, apiKey, env) {
     return {
       provider: 'lmstudio',
       ok: false,
-      model_id: 'gemma-4-12b-it',
-      endpoint: 'http://127.0.0.1:1234/v1/chat/completions',
+      model_id: cfg.lmstudioModel,
+      endpoint: cfg.lmstudioUrl,
       latency_ms: null,
-      error:
-        'Local LM Studio (127.0.0.1:1234) is unreachable from Cloudflare Edge runtime. Run locally or use Gemini API.',
+      error: `Local LM Studio (${cfg.lmstudioUrl}) is unreachable from Cloudflare Edge runtime. Run locally or use Gemini API.`,
     };
   }
 
@@ -464,7 +527,7 @@ export default {
         }
       }
 
-      const activeKey = apiKeyOverride || (env.GEMINI_API_KEY || '').trim();
+      const activeKey = cleanEnvValue(apiKeyOverride) || cleanEnvValue(env.GEMINI_API_KEY);
 
       if (provider === 'all') {
         const [geminiStatus, ollamaStatus, lmstudioStatus] = await Promise.all([
@@ -555,7 +618,7 @@ export default {
           );
         }
 
-        const activeKey = apiKeyOverride || (env.GEMINI_API_KEY || '').trim();
+        const activeKey = cleanEnvValue(apiKeyOverride) || cleanEnvValue(env.GEMINI_API_KEY);
         const prompt = buildInterrogationPrompt(
           userMessage,
           SESSION_STATE.last_vc_question,
@@ -777,7 +840,7 @@ export default {
           );
         }
 
-        const activeKey = apiKeyOverride || (env.GEMINI_API_KEY || '').trim();
+        const activeKey = cleanEnvValue(apiKeyOverride) || cleanEnvValue(env.GEMINI_API_KEY);
         const prompt = buildVerdictPrompt();
         const result = await callGeminiCascade(prompt, null, 'image/jpeg', activeKey, env);
 

@@ -47,6 +47,7 @@ _CLOUD_CASCADE: list[str] = [
 
 _DEFAULT_TEMPERATURE: float = 0.3
 
+_DEFAULT_OLLAMA_HOST: str = "http://127.0.0.1:11434"
 _DEFAULT_OLLAMA_URL: str = "http://127.0.0.1:11434/api/chat"
 _DEFAULT_OLLAMA_TAGS_URL: str = "http://127.0.0.1:11434/api/tags"
 _DEFAULT_OLLAMA_MODEL: str = "gemma4:12b"
@@ -55,6 +56,13 @@ _DEFAULT_OLLAMA_KEEP_ALIVE: str = "30m"
 _DEFAULT_LMSTUDIO_URL: str = "http://127.0.0.1:1234/v1/chat/completions"
 _DEFAULT_LMSTUDIO_MODELS_URL: str = "http://127.0.0.1:1234/v1/models"
 _DEFAULT_LMSTUDIO_MODEL: str = "gemma-4-12b-it"
+
+
+def _clean_env(key: str, default: str = "") -> str:
+    """Read an environment variable with quote-stripping and `or default` fallback."""
+    raw = os.environ.get(key) or default
+    cleaned = str(raw).strip().strip("\"'").strip()
+    return cleaned or default
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -119,15 +127,12 @@ class Gemma4Router:
     """
 
     def __init__(self, api_key: Optional[str] = None) -> None:
-        self._api_key: Optional[str] = api_key or os.environ.get("GEMINI_API_KEY")
+        self._api_key: Optional[str] = api_key or _clean_env("GEMINI_API_KEY", "")
 
     def _resolve_api_key(self, api_key_override: Optional[str] = None) -> str:
         load_dotenv(override=True)
-        return (
-            api_key_override.strip()
-            if api_key_override and api_key_override.strip()
-            else (os.environ.get("GEMINI_API_KEY") or self._api_key or "").strip()
-        )
+        override_clean = str(api_key_override or "").strip().strip("\"'").strip()
+        return override_clean or _clean_env("GEMINI_API_KEY", "") or (self._api_key or "").strip()
 
     async def generate(
         self,
@@ -179,15 +184,15 @@ class Gemma4Router:
         """Test connectivity and measure exact round-trip latency (ms) for a provider."""
         if provider == "gemini_api":
             active_api_key = self._resolve_api_key(api_key_override)
+            model_id = _clean_env("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it")
             if not active_api_key:
                 return {
                     "provider": "gemini_api",
                     "ok": False,
-                    "model_id": os.environ.get("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it"),
+                    "model_id": model_id,
                     "latency_ms": None,
                     "error": "GEMINI_API_KEY is missing in .env and no override key was provided.",
                 }
-            model_id = os.environ.get("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it").strip() or "gemma-4-26b-a4b-it"
             try:
                 client = genai.Client(api_key=active_api_key)
                 start_t = time.time()
@@ -218,13 +223,14 @@ class Gemma4Router:
                 }
 
         if provider == "ollama":
-            ollama_url = os.environ.get("OLLAMA_URL", _DEFAULT_OLLAMA_URL)
-            base_host = ollama_url.split("/api/")[0] if "/api/" in ollama_url else "http://127.0.0.1:11434"
+            ollama_host = _clean_env("OLLAMA_HOST", _DEFAULT_OLLAMA_HOST)
+            ollama_url = _clean_env("OLLAMA_URL", f"{ollama_host.rstrip('/')}/api/chat")
+            base_host = ollama_url.split("/api/")[0] if "/api/" in ollama_url else ollama_host.rstrip("/")
             tags_url = f"{base_host}/api/tags"
             ollama_model = (
                 model_override.strip()
                 if model_override and model_override.strip()
-                else os.environ.get("OLLAMA_MODEL", _DEFAULT_OLLAMA_MODEL)
+                else _clean_env("OLLAMA_MODEL", _DEFAULT_OLLAMA_MODEL)
             )
             try:
                 start_t = time.time()
@@ -253,13 +259,13 @@ class Gemma4Router:
                 }
 
         if provider == "lmstudio":
-            lmstudio_url = os.environ.get("LMSTUDIO_URL", _DEFAULT_LMSTUDIO_URL)
+            lmstudio_url = _clean_env("LMSTUDIO_URL", _DEFAULT_LMSTUDIO_URL)
             base_host = lmstudio_url.split("/v1/")[0] if "/v1/" in lmstudio_url else "http://127.0.0.1:1234"
             models_url = f"{base_host}/v1/models"
             lmstudio_model = (
                 model_override.strip()
                 if model_override and model_override.strip()
-                else os.environ.get("LMSTUDIO_MODEL", _DEFAULT_LMSTUDIO_MODEL)
+                else _clean_env("LMSTUDIO_MODEL", _DEFAULT_LMSTUDIO_MODEL)
             )
             try:
                 start_t = time.time()
@@ -315,8 +321,11 @@ class Gemma4Router:
             contents.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
         contents.append(prompt)
 
-        env_primary = os.environ.get("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it").strip()
-        env_fallbacks = os.environ.get("GEMMA_FALLBACK_MODELS", "").strip()
+        env_primary = _clean_env("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it")
+        env_fallbacks = _clean_env(
+            "GEMMA_FALLBACK_MODELS",
+            "gemma-4-26b-a4b-it,gemma-4-31b-it,gemma-3-27b-it",
+        )
 
         cascade: list[str] = []
         if env_primary:
@@ -377,13 +386,14 @@ class Gemma4Router:
         ollama_model_override: Optional[str] = None,
     ) -> dict[str, Any]:
         """Call local Ollama instance directly. Never falls back to Gemini API."""
-        ollama_url = os.environ.get("OLLAMA_URL", _DEFAULT_OLLAMA_URL)
+        ollama_host = _clean_env("OLLAMA_HOST", _DEFAULT_OLLAMA_HOST)
+        ollama_url = _clean_env("OLLAMA_URL", f"{ollama_host.rstrip('/')}/api/chat")
         ollama_model = (
             ollama_model_override.strip()
             if ollama_model_override and ollama_model_override.strip()
-            else os.environ.get("OLLAMA_MODEL", _DEFAULT_OLLAMA_MODEL)
+            else _clean_env("OLLAMA_MODEL", _DEFAULT_OLLAMA_MODEL)
         )
-        keep_alive = os.environ.get("OLLAMA_KEEP_ALIVE", _DEFAULT_OLLAMA_KEEP_ALIVE)
+        keep_alive = _clean_env("OLLAMA_KEEP_ALIVE", _DEFAULT_OLLAMA_KEEP_ALIVE)
 
         message: dict[str, Any] = {"role": "user", "content": prompt}
         if image_bytes:
@@ -446,11 +456,11 @@ class Gemma4Router:
         model_override: Optional[str] = None,
     ) -> dict[str, Any]:
         """Call local LM Studio server directly. Never falls back to Gemini API."""
-        lmstudio_url = os.environ.get("LMSTUDIO_URL", _DEFAULT_LMSTUDIO_URL)
+        lmstudio_url = _clean_env("LMSTUDIO_URL", _DEFAULT_LMSTUDIO_URL)
         lmstudio_model = (
             model_override.strip()
             if model_override and model_override.strip()
-            else os.environ.get("LMSTUDIO_MODEL", _DEFAULT_LMSTUDIO_MODEL)
+            else _clean_env("LMSTUDIO_MODEL", _DEFAULT_LMSTUDIO_MODEL)
         )
 
         if image_bytes:
