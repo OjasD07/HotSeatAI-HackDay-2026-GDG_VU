@@ -1,0 +1,18 @@
+# ─────────────────────────────────────────────────────────────
+# HotSeat AI — Dependencies
+# ─────────────────────────────────────────────────────────────
+# Core API framework
+fastapi>=0.115.0
+uvicorn>=0.30.0
+
+# Google GenAI SDK (Gemma 4 via Gemini API)
+google-genai>=1.0.0
+
+# Multipart file uploads (pitch-deck slides)
+python-multipart>=0.0.9
+
+# Data validation & settings
+pydantic>=2.7.0
+
+# Graph / relationship visualisation
+graphifyy>=0.9.38
