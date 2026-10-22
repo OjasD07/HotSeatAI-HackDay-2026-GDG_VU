@@ -77,12 +77,6 @@
     "ast_hash": "c3098748eaee95c19622737eb06c1185",
     "semantic_hash": ""
   },
-  "static/favicon.svg": {
-    "mtime": 1792668640.945175,
-    "seen": 1792669095.379193,
-    "ast_hash": "0fe0a3e839cfa0ff98e11e5de0ad9014",
-    "semantic_hash": ""
-  },
   "package.json": {
     "mtime": 1792670189.6160223,
     "seen": 1792670216.201077,

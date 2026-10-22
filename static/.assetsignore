@@ -1,0 +1,12 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Cloudflare Workers Static Assets Ignore Rules (./static Directory)
+# ─────────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.env
+.env.*
+.git/
+*.map
+*.log
+*.bak
+*.tmp

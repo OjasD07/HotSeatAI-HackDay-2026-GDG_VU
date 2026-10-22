@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker Build Context Ignore Rules
+# ─────────────────────────────────────────────────────────────────────────────
+.env
+.env.*
+.dev.vars
+.git/
+.gitignore
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+node_modules/
+.wrangler/
+.DS_Store
+Thumbs.db
+*.log

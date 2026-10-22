@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Graphify Corpus Ignore Rules
+# ─────────────────────────────────────────────────────────────────────────────
+.env
+.env.*
+.dev.vars
+.gitignore
+.assetsignore
+static/.assetsignore
+.dockerignore
+.graphifyignore
+Dockerfile
+LICENSE
+wrangler.toml
+static/css/styles.css
+static/favicon.svg
+.venv/
+node_modules/
+.wrangler/
+__pycache__/
+.DS_Store

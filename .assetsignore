@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Cloudflare Workers Static Assets Ignore Rules (Root Safeguard)
+# Ensures backend source code, secrets, and build artifacts are never uploaded
+# as public static assets if root directory scanning is triggered.
+# ─────────────────────────────────────────────────────────────────────────────
+.env
+.env.*
+.dev.vars
+.git/
+.gitignore
+.claude/
+.venv/
+venv/
+env/
+__pycache__/
+*.py
+*.pyc
+worker.js
+wrangler.toml
+package.json
+package-lock.json
+node_modules/
+.wrangler/
+Dockerfile
+.dockerignore
+render.yaml
+requirements.txt
+graphify-out/
+state/
+CLAUDE.md
+README.md
+LICENSE
+.DS_Store
+Thumbs.db
+*.log
+*.map
