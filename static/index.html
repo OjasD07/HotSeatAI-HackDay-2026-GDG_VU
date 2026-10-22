@@ -151,25 +151,25 @@
       <!-- Slide Viewport -->
       <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-2 card-glow">
         <div class="slide-viewport flex items-center justify-center relative">
-          <canvas id="slideCanvas" width="800" height="480" class="w-full h-full object-contain rounded-lg"></canvas>
-          <div id="slideEmptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600">
+          <canvas id="slideCanvas" width="1280" height="768" class="w-full h-full object-contain rounded-lg"></canvas>
+          <div id="slideEmptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600 pointer-events-none">
             <svg class="w-12 h-12 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
             <span class="text-xs">Upload a deck or choose a sample</span>
           </div>
         </div>
 
         <!-- File Upload -->
-        <input type="file" id="fileInput" accept=".pdf,image/*" multiple class="file-hidden" onchange="handleFileUpload(event)" />
+        <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp,image/*" multiple class="file-hidden" onchange="handleFileUpload(event)" />
         <button onclick="document.getElementById('fileInput').click()"
           class="w-full mt-2 px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700/60 hover:bg-slate-700 transition-colors text-slate-400">
-          📄 Upload PDF Deck or Slide Images
+          📄 Upload PDF Deck or Slide Images (.pdf, .png, .jpg, .webp)
         </button>
 
         <!-- Slide Navigation -->
         <div class="flex items-center gap-2 mt-2">
-          <button onclick="prevSlide()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">◀ Prev</button>
+          <button id="prevSlideBtn" onclick="prevSlide()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">◀ Prev Slide</button>
           <span id="slideIndicator" class="flex-1 text-center text-xs text-slate-500">Slide 0 of 0</span>
-          <button onclick="nextSlide()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">Next ▶</button>
+          <button id="nextSlideBtn" onclick="nextSlide()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">Next Slide ▶</button>
         </div>
         <button id="pitchSlideBtn" onclick="pitchCurrentSlide()"
           class="w-full mt-2 px-3 py-2.5 rounded-lg text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98]">
@@ -399,126 +399,823 @@
   let lastSkillMd = '';
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Sample Deck Generator — renders synthetic slides on canvas
+  //  Contradiction-Laden Multi-Industry Sample Decks
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const SAMPLE_DECKS = {
+    // ── DECK 1: FinTech ("BorderlessPay: AI Cross-Border UPI Remittance") ───
     fintech: [
-      { title: 'PayBridge — FinTech Pitch', subtitle: 'Cross-Border SME Payments', color: '#0ea5e9',
-        metrics: ['TAM: $4.2T Global SME Payments', 'SAM: $380B APAC Corridor', 'MRR: $1.2M (Growing 28% MoM)', 'CAC: $42 | LTV: $1,860 (44x)'] },
-      { title: 'Unit Economics & Traction', subtitle: 'Series A Metrics', color: '#0ea5e9',
-        metrics: ['Gross Margin: 72%', 'Net Revenue Retention: 138%', 'Active Merchants: 18,400', 'Avg. Ticket Size: $2,300'] },
-      { title: 'Go-To-Market & The Ask', subtitle: 'Raising $12M Series A', color: '#0ea5e9',
-        metrics: ['Pre-Money Valuation: $48M', 'Target: 50K merchants by Q4 2027', 'Runway: 22 months post-raise', 'Team: 38 people across 3 offices'] },
+      {
+        title: 'BorderlessPay: AI Cross-Border UPI Remittance',
+        subtitle: 'Slide 1 — Acquisition, Fee Structure & Market Opportunity',
+        slideLabel: 'Slide 1 of 3 — Growth & Pricing',
+        color: '#0ea5e9',
+        accentAlt: '#38bdf8',
+        metrics: [
+          {
+            label: 'Customer Acquisition Cost',
+            value: '$0 Customer Acquisition Cost (100% Organic Viral Loops)',
+            icon: '🚀',
+          },
+          {
+            label: 'Transfer Fee Model',
+            value: '0% Transfer Fees Forever',
+            icon: '💸',
+          },
+          {
+            label: 'Corridor Market Size',
+            value: '$12B Corridor TAM',
+            icon: '🌏',
+          },
+        ],
+        bullets: [
+          '$0 Customer Acquisition Cost (100% Organic Viral Loops) — zero paid marketing spend',
+          '0% Transfer Fees Forever across the $12B Corridor TAM (India–UAE–SEA–UK)',
+          'Unit economics claimed self-sustaining from Day 1 via peer-to-peer referral virality (NPS 78)',
+        ],
+        chart: {
+          type: 'bar',
+          title: 'Monthly Active Users — 100% Organic Viral Loops (K)',
+          bars: [
+            { label: 'M1', value: 40, suffix: 'K' },
+            { label: 'M2', value: 65, suffix: 'K' },
+            { label: 'M3', value: 82, suffix: 'K' },
+            { label: 'M4', value: 95, suffix: 'K' },
+            { label: 'M5', value: 110, suffix: 'K' },
+            { label: 'M6', value: 140, suffix: 'K' },
+          ],
+        },
+        badge: null,
+      },
+      {
+        title: 'BorderlessPay: AI Cross-Border UPI Remittance',
+        subtitle: 'Year 1 Financial Model: ₹18 Crore Paid Meta/Google Ads Budget ($42 CAC)',
+        slideLabel: 'Slide 2 of 3 — Year 1 Financial Model ⚠️',
+        color: '#0ea5e9',
+        accentAlt: '#38bdf8',
+        metrics: [
+          {
+            label: 'Year 1 Financial Model',
+            value: '₹18 Crore Paid Meta/Google Ads Budget ($42 CAC)',
+            icon: '📢',
+          },
+          {
+            label: 'Hidden FX Monetization',
+            value: '2.8% Hidden FX Spread Fee on Every Transfer',
+            icon: '🏦',
+          },
+          {
+            label: 'Blended Paid Acquisition Cost',
+            value: '$42 CAC Across Paid Meta, Google & Influencer Channels',
+            icon: '💰',
+          },
+        ],
+        bullets: [
+          'Year 1 Financial Model: ₹18 Crore Paid Meta/Google Ads Budget ($42 CAC)',
+          '2.8% Hidden FX Spread Fee on Every Transfer generates 94% of total projected revenue',
+          'Performance marketing team of 8 specialists + ₹3.2 Crore allocated to paid FinFluencer campaigns',
+        ],
+        chart: {
+          type: 'bar',
+          title: 'Year 1 Paid Ads Spend & Hidden FX Revenue (₹ Cr)',
+          bars: [
+            { label: 'Q1 Ads', value: 3.2, suffix: 'Cr' },
+            { label: 'Q2 Ads', value: 4.1, suffix: 'Cr' },
+            { label: 'Q3 Ads', value: 5.0, suffix: 'Cr' },
+            { label: 'Q4 Ads', value: 5.7, suffix: 'Cr' },
+            { label: 'FX Fee', value: 22.4, suffix: 'Cr' },
+          ],
+        },
+        badge: { text: '⚠️ CONTRADICTS SLIDE 1 ($0 CAC & 0% FEE)', color: '#f43f5e' },
+      },
+      {
+        title: 'BorderlessPay: AI Cross-Border UPI Remittance',
+        subtitle: '2x2 Competitor Matrix — Instant Settlement Moat',
+        slideLabel: 'Slide 3 of 3 — 2x2 Competitor Matrix',
+        color: '#0ea5e9',
+        accentAlt: '#38bdf8',
+        metrics: [
+          {
+            label: '2x2 Competitor Matrix',
+            value: '"Instant Settlement" Claimed as Unique Moat',
+            icon: '⚡',
+          },
+          {
+            label: 'Competitors Plotted on Matrix',
+            value: 'Western Union, Legacy SWIFT Wire, Traditional Banks',
+            icon: '🏛️',
+          },
+          {
+            label: 'Competitors Omitted',
+            value: 'Omits Wise and Revolut from 2x2 Competitor Matrix',
+            icon: '👻',
+          },
+        ],
+        bullets: [
+          '2x2 Competitor Matrix claiming "Instant Settlement" as unique moat while omitting Wise and Revolut',
+          'Plots BorderlessPay alone in top-right quadrant (Instant Settlement + Low Fee) against legacy banks',
+          'Wise settles 55%+ transfers in <20s at 0.4% fee; Revolut processes $6B+/month in instant FX transfers',
+        ],
+        chart: {
+          type: 'matrix',
+          title: '2x2 Competitor Matrix (Speed vs Cost)',
+          bars: [
+            { label: 'Borderless', value: 98, suffix: '%' },
+            { label: 'W. Union', value: 22, suffix: '%' },
+            { label: 'SWIFT', value: 12, suffix: '%' },
+            { label: 'Wise (Omit)', value: 92, suffix: '%' },
+            { label: 'Revolut (Omit)', value: 90, suffix: '%' },
+          ],
+          matrix: {
+            xAxis: 'Low Transfer Cost →',
+            yAxis: 'Instant Settlement ↑',
+            points: [
+              { name: 'BorderlessPay (Instant Settlement)', x: 0.82, y: 0.82, highlight: true },
+              { name: 'Western Union', x: 0.24, y: 0.34, highlight: false },
+              { name: 'Legacy SWIFT Banks', x: 0.18, y: 0.18, highlight: false },
+              { name: 'Wise & Revolut (Omitted!)', x: 0.76, y: 0.76, omitted: true },
+            ],
+          },
+        },
+        badge: { text: '⚠️ OMITS WISE & REVOLUT', color: '#f59e0b' },
+      },
     ],
+
+    // ── DECK 2: MedTech ("HemoScan: Smartphone Camera Anemia Diagnostic") ───
     medtech: [
-      { title: 'NeuroScan AI — MedTech Pitch', subtitle: 'Early Alzheimer Detection via Retinal Imaging', color: '#a855f7',
-        metrics: ['TAM: $28B Alzheimer Diagnostics', 'Accuracy: 94.2% (vs 78% standard)', 'FDA 510(k) Submitted — Decision Q1 2027', 'IP: 3 Granted Patents, 2 Pending'] },
-      { title: 'Clinical Validation & Pipeline', subtitle: 'Multi-Site Trial Results', color: '#a855f7',
-        metrics: ['Trial Sites: 12 Hospitals', 'Patients Screened: 4,200', 'Sensitivity: 96.1% | Specificity: 91.8%', 'Time to Result: 4 min vs 45 min (MRI)'] },
-      { title: 'Business Model & Fundraise', subtitle: 'Raising $18M Series B', color: '#a855f7',
-        metrics: ['Revenue Model: SaaS + Per-Scan Fee', 'ARR: $3.1M (hospitals on contract)', 'Gross Margin: 84%', 'Burn Rate: $680K/month'] },
+      {
+        title: 'HemoScan: Smartphone Camera Anemia Diagnostic',
+        subtitle: 'Slide 1 — Rural Point-of-Care Edge AI & Pricing',
+        slideLabel: 'Slide 1 of 3 — Edge AI & Pricing',
+        color: '#a855f7',
+        accentAlt: '#c084fc',
+        metrics: [
+          {
+            label: 'Edge AI Architecture',
+            value: '100% Offline Edge AI for Rural Clinics with Zero Internet',
+            icon: '📱',
+          },
+          {
+            label: 'Point-of-Care Scan Pricing',
+            value: '₹10 Price Per Scan',
+            icon: '💊',
+          },
+          {
+            label: 'Network Dependency',
+            value: 'Zero Internet Needed — On-Device Smartphone Inference',
+            icon: '📡',
+          },
+        ],
+        bullets: [
+          '100% Offline Edge AI for Rural Clinics with Zero Internet connectivity required',
+          '₹10 Price Per Scan ($0.12) for mass anemia screening at rural Primary Health Centres (PHCs)',
+          'Quantized TFLite model claimed to run locally on any low-end 2GB RAM Android smartphone',
+        ],
+        chart: {
+          type: 'bar',
+          title: 'Diagnostic Sensitivity by Clinic Tier (%)',
+          bars: [
+            { label: 'Low-End', value: 88, suffix: '%' },
+            { label: 'Mid-Tier', value: 93, suffix: '%' },
+            { label: 'Rural PHC', value: 96, suffix: '%' },
+            { label: 'Lab Gold', value: 98, suffix: '%' },
+          ],
+        },
+        badge: null,
+      },
+      {
+        title: 'HemoScan: Smartphone Camera Anemia Diagnostic',
+        subtitle: 'System Architecture: 4K Video Uploaded to Cloud A100 GPU Cluster',
+        slideLabel: 'Slide 2 of 3 — System Architecture ⚠️',
+        color: '#a855f7',
+        accentAlt: '#c084fc',
+        metrics: [
+          {
+            label: 'System Architecture',
+            value: '4K Video Uploaded to Cloud A100 GPU Cluster',
+            icon: '☁️',
+          },
+          {
+            label: 'Cloud Inference Unit Cost',
+            value: '$0.65 Cloud API Cost Per Scan (≈ ₹54 Cost vs ₹10 Price)',
+            icon: '💸',
+          },
+          {
+            label: 'Mandatory Hospital Retainer',
+            value: '₹15,000/mo Hospital Subscription Required',
+            icon: '🏥',
+          },
+        ],
+        bullets: [
+          'System Architecture: 4K Video Uploaded to Cloud A100 GPU Cluster ($0.65 Cloud API Cost Per Scan + ₹15,000/mo Hospital Subscription)',
+          'Requires high-speed 4G/5G connectivity to upload 120MB raw 4K conjunctival video per patient scan',
+          '$0.65 Cloud API Cost Per Scan (₹54) is 5.4x higher than the stated ₹10 Price Per Scan on Slide 1',
+        ],
+        chart: {
+          type: 'bar',
+          title: 'Per-Scan Economics: ₹10 Price vs ₹54 Cloud Cost',
+          bars: [
+            { label: 'Scan Price', value: 10, suffix: '₹' },
+            { label: 'A100 GPU', value: 38, suffix: '₹' },
+            { label: '4K Upload', value: 10, suffix: '₹' },
+            { label: 'Storage', value: 6, suffix: '₹' },
+            { label: 'Total Cost', value: 54, suffix: '₹' },
+          ],
+        },
+        badge: { text: '⚠️ CONTRADICTS SLIDE 1: CLOUD GPU + NEGATIVE MARGIN', color: '#f43f5e' },
+      },
+      {
+        title: 'HemoScan: Smartphone Camera Anemia Diagnostic',
+        subtitle: 'Go-To-Market: 5,000 Government Hospitals in 90 Days',
+        slideLabel: 'Slide 3 of 3 — Go-To-Market & Regulatory',
+        color: '#a855f7',
+        accentAlt: '#c084fc',
+        metrics: [
+          {
+            label: 'Go-To-Market Target',
+            value: '5,000 Government Hospitals in 90 Days',
+            icon: '🏗️',
+          },
+          {
+            label: 'Regulatory Clearance Claim',
+            value: 'Zero CDSCO/FDA Clinical Trials Required',
+            icon: '📋',
+          },
+          {
+            label: 'Deployment Team Capacity',
+            value: '56 Hospitals Onboarded/Day by 3 Co-Founders + 2 Interns',
+            icon: '👥',
+          },
+        ],
+        bullets: [
+          'Go-To-Market: 5,000 Government Hospitals in 90 Days with Zero CDSCO/FDA Clinical Trials Required',
+          'Claims Class-B diagnostic medical device is exempt from CDSCO MDR 2017 and FDA 510(k) clinical validation',
+          'Assumes instant state procurement sign-off across 5,000 public hospitals without tender cycles',
+        ],
+        chart: {
+          type: 'bar',
+          title: 'Claimed 90-Day Govt Hospital Rollout',
+          bars: [
+            { label: 'Day 15', value: 450, suffix: '' },
+            { label: 'Day 30', value: 1250, suffix: '' },
+            { label: 'Day 60', value: 3100, suffix: '' },
+            { label: 'Day 90', value: 5000, suffix: '' },
+          ],
+        },
+        badge: { text: '⚠️ UNREALISTIC GTM + CDSCO/FDA REGULATORY RISK', color: '#f59e0b' },
+      },
     ],
+
+    // ── DECK 3: D2C ("AdaptPop: Zero-Sugar Ayurvedic Prebiotic Soda") ───────
     d2c: [
-      { title: 'GreenBrew — D2C Retail Pitch', subtitle: 'Plant-Based Protein Beverages', color: '#f59e0b',
-        metrics: ['TAM: $14.5B Plant Protein Drinks', 'SKUs: 8 Flavors in 3 Formats', 'Monthly Orders: 42,000', 'Avg Order Value: ₹680 ($8.20)'] },
-      { title: 'Unit Economics & Channels', subtitle: 'D2C + Quick Commerce Hybrid', color: '#f59e0b',
-        metrics: ['Gross Margin: 58% (D2C) / 34% (Q-Com)', 'CAC: ₹320 (D2C) / ₹85 (Q-Com)', 'Repeat Rate: 3.2x in 90 days', 'Channel Mix: 60% D2C, 30% Q-Com, 10% Retail'] },
-      { title: 'Growth Plan & The Ask', subtitle: 'Raising ₹35 Cr Seed Round', color: '#f59e0b',
-        metrics: ['Pre-Money: ₹120 Cr', 'Target: 200K monthly orders by Dec 2027', 'Dark Kitchen Expansion: 8 cities', 'Team: 22 people, 3 co-founders'] },
+      {
+        title: 'AdaptPop: Zero-Sugar Ayurvedic Prebiotic Soda',
+        subtitle: 'Slide 1 — 100% Direct-to-Consumer Online Subscription Model',
+        slideLabel: 'Slide 1 of 3 — D2C Subscription Model',
+        color: '#f59e0b',
+        accentAlt: '#fbbf24',
+        metrics: [
+          {
+            label: 'Distribution Strategy',
+            value: '100% Direct-to-Consumer Online Subscription Model',
+            icon: '🛒',
+          },
+          {
+            label: 'Gross Margin Preservation',
+            value: 'Skipping Offline Distributors to Keep 76% Gross Margin',
+            icon: '📈',
+          },
+          {
+            label: 'Recurring Revenue Model',
+            value: 'Monthly Auto-Ship DTC Prebiotic Soda Subscription',
+            icon: '📦',
+          },
+        ],
+        bullets: [
+          '100% Direct-to-Consumer Online Subscription Model — Skipping Offline Distributors to Keep 76% Gross Margin',
+          '100% owned Shopify + WhatsApp subscription channels with zero middlemen or stockist commissions',
+          'Zero offline retail slotting fees or trade marketing deductions',
+        ],
+        chart: {
+          type: 'bar',
+          title: 'Gross Margin by Distribution Channel (%)',
+          bars: [
+            { label: 'D2C Online', value: 76, suffix: '%' },
+            { label: 'Q-Commerce', value: 42, suffix: '%' },
+            { label: 'Kirana/GT', value: 28, suffix: '%' },
+          ],
+        },
+        badge: null,
+      },
+      {
+        title: 'AdaptPop: Zero-Sugar Ayurvedic Prebiotic Soda',
+        subtitle: 'Year 1 Revenue Breakdown: 85% via 45,000 Offline Kirana & Supermarket Stores',
+        slideLabel: 'Slide 2 of 3 — Year 1 Revenue Breakdown ⚠️',
+        color: '#f59e0b',
+        accentAlt: '#fbbf24',
+        metrics: [
+          {
+            label: 'Year 1 Revenue Breakdown',
+            value: '85% of Sales via 45,000 Offline Kirana & Supermarket Stores',
+            icon: '🏪',
+          },
+          {
+            label: 'Channel Trade Cut',
+            value: '35% Distributor Margin Cut on Offline Volume',
+            icon: '✂️',
+          },
+          {
+            label: 'Modern Trade Slotting',
+            value: '₹25L Retail Slotting Fees for Supermarket Shelf Placement',
+            icon: '🏷️',
+          },
+        ],
+        bullets: [
+          'Year 1 Revenue Breakdown: 85% of Sales via 45,000 Offline Kirana & Supermarket Stores (35% Distributor Margin Cut + ₹25L Retail Slotting Fees)',
+          'Effective blended gross margin collapses from 76% to 41% after 35% distributor & super-stockist cuts',
+          'Online D2C subscription represents only 15% of Year 1 sales (8% website + 7% WhatsApp)',
+        ],
+        chart: {
+          type: 'bar',
+          title: 'Year 1 Revenue Split by Channel (%)',
+          bars: [
+            { label: 'Kirana', value: 52, suffix: '%' },
+            { label: 'Supermkt', value: 33, suffix: '%' },
+            { label: 'D2C Web', value: 8, suffix: '%' },
+            { label: 'WhatsApp', value: 7, suffix: '%' },
+          ],
+        },
+        badge: { text: '⚠️ CONTRADICTS SLIDE 1: 85% OFFLINE RETAIL', color: '#f43f5e' },
+      },
+      {
+        title: 'AdaptPop: Zero-Sugar Ayurvedic Prebiotic Soda',
+        subtitle: 'Unbeatable Defensibility: Secret Ashwagandha + Lime Flavor Blend',
+        slideLabel: 'Slide 3 of 3 — Defensibility & Moat',
+        color: '#f59e0b',
+        accentAlt: '#fbbf24',
+        metrics: [
+          {
+            label: 'Unbeatable Defensibility',
+            value: 'Secret Ashwagandha + Lime Flavor Blend',
+            icon: '🧪',
+          },
+          {
+            label: 'Intellectual Property Status',
+            value: 'Zero Patents Filed — Third-Party Contract Bottler',
+            icon: '📜',
+          },
+          {
+            label: 'FMCG Incumbent Threat',
+            value: 'Coca-Cola, PepsiCo, Lahori & Paper Boat in Same Category',
+            icon: '🥤',
+          },
+        ],
+        bullets: [
+          'Unbeatable Defensibility: Secret Ashwagandha + Lime Flavor Blend claimed as sole long-term moat',
+          'Formulated with standard commercial Ashwagandha root extract at a non-exclusive co-packing plant',
+          'Any FMCG incumbent can replicate the flavor profile in 4–6 weeks and outspend on kirana distribution',
+        ],
+        chart: {
+          type: 'bar',
+          title: 'Defensibility Moat Audit (Score / 100)',
+          bars: [
+            { label: 'Claimed', value: 95, suffix: '' },
+            { label: 'Patent IP', value: 5, suffix: '' },
+            { label: 'Switch Cost', value: 10, suffix: '' },
+            { label: 'Lock-In', value: 14, suffix: '' },
+          ],
+        },
+        badge: { text: '⚠️ WEAK MOAT — EASILY REPLICABLE FLAVOR', color: '#f59e0b' },
+      },
     ],
   };
 
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Professional Canvas Slide Renderer (1280x768 Dark-Themed Presentation)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function _wrapCanvasText(ctx, text, maxWidth) {
+    const words = String(text || '').split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  }
+
+  function drawSlideToCanvas(slideObj) {
+    const canvas = document.getElementById('slideCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = 1280, H = 768;
+    canvas.width = W;
+    canvas.height = H;
+
+    // ── 1. Dark presentation background gradient ───────────────────────────
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#070d19');
+    bg.addColorStop(0.5, '#0f172a');
+    bg.addColorStop(1, '#162033');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle presentation grid pattern
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.16)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 64) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 64) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    // Ambient radial glow in top-right corner
+    const glow = ctx.createRadialGradient(W - 180, 120, 20, W - 180, 120, 420);
+    glow.addColorStop(0, slideObj.color + '22');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── 2. Top Header Bar & Left Accent Strip ──────────────────────────────
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.fillRect(0, 0, W, 118);
+
+    const hGrad = ctx.createLinearGradient(0, 0, W, 0);
+    hGrad.addColorStop(0, slideObj.color);
+    hGrad.addColorStop(0.6, slideObj.accentAlt || slideObj.color);
+    hGrad.addColorStop(1, slideObj.color + '33');
+    ctx.fillStyle = hGrad;
+    ctx.fillRect(0, 0, W, 6);
+
+    ctx.fillStyle = slideObj.color;
+    ctx.fillRect(0, 0, 8, H);
+
+    // ── 3. Title, Subtitle & Slide Badge ───────────────────────────────────
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '800 30px Inter, system-ui, sans-serif';
+    ctx.fillText(slideObj.title, 40, 52);
+
+    ctx.fillStyle = slideObj.accentAlt || slideObj.color;
+    ctx.font = '600 18px Inter, system-ui, sans-serif';
+    ctx.fillText(slideObj.subtitle, 40, 86);
+
+    // Slide label (top-right)
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '700 14px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(slideObj.slideLabel || '', W - 36, 46);
+    ctx.textAlign = 'left';
+
+    // Contradiction / warning badge
+    if (slideObj.badge) {
+      ctx.font = '800 13px Inter, system-ui, sans-serif';
+      const bW = ctx.measureText(slideObj.badge.text).width + 28;
+      const bX = W - bW - 36;
+      const bY = 60;
+      ctx.fillStyle = slideObj.badge.color + '24';
+      ctx.beginPath();
+      ctx.roundRect(bX, bY, bW, 32, 6);
+      ctx.fill();
+      ctx.strokeStyle = slideObj.badge.color + '99';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = slideObj.badge.color;
+      ctx.textAlign = 'center';
+      ctx.fillText(slideObj.badge.text, bX + bW / 2, bY + 21);
+      ctx.textAlign = 'left';
+    }
+
+    // Header divider line
+    const divGrad = ctx.createLinearGradient(40, 0, W - 40, 0);
+    divGrad.addColorStop(0, slideObj.color + '88');
+    divGrad.addColorStop(1, 'rgba(51, 65, 85, 0.3)');
+    ctx.fillStyle = divGrad;
+    ctx.fillRect(40, 116, W - 76, 1.5);
+
+    // ── 4. Three Metric Boxes (Left Column) ────────────────────────────────
+    const metricsX = 40;
+    const metricsW = 700;
+    const metricsStartY = 138;
+    const metricBoxH = 104;
+    const metricGap = 16;
+
+    (slideObj.metrics || []).slice(0, 3).forEach((m, i) => {
+      const y = metricsStartY + i * (metricBoxH + metricGap);
+
+      // Metric box surface
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.78)';
+      ctx.beginPath();
+      ctx.roundRect(metricsX, y, metricsW, metricBoxH, 10);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Left accent bar inside metric card
+      ctx.fillStyle = slideObj.color;
+      ctx.beginPath();
+      ctx.roundRect(metricsX, y, 6, metricBoxH, [10, 0, 0, 10]);
+      ctx.fill();
+
+      // Icon badge
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.beginPath();
+      ctx.roundRect(metricsX + 20, y + 22, 56, 56, 12);
+      ctx.fill();
+      ctx.font = '28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(m.icon || '📊', metricsX + 48, y + 60);
+      ctx.textAlign = 'left';
+
+      // Metric label
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '700 13px Inter, system-ui, sans-serif';
+      ctx.fillText((m.label || '').toUpperCase(), metricsX + 92, y + 32);
+
+      // Metric value (word-wrapped so zero content is omitted)
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '800 21px Inter, system-ui, sans-serif';
+      const maxValW = metricsW - 110;
+      let valLines = _wrapCanvasText(ctx, m.value, maxValW);
+      if (valLines.length > 2) {
+        ctx.font = '700 18px Inter, system-ui, sans-serif';
+        valLines = _wrapCanvasText(ctx, m.value, maxValW);
+      }
+      if (valLines.length === 1) {
+        ctx.fillText(valLines[0], metricsX + 92, y + 68);
+      } else {
+        valLines.slice(0, 2).forEach((line, idx) => {
+          ctx.fillText(line, metricsX + 92, y + 58 + idx * 24);
+        });
+      }
+    });
+
+    // ── 5. Visual Chart / Bar / Matrix Graphic (Right Column) ──────────────
+    const rightX = 764;
+    const rightW = 480;
+    const rightY = 138;
+    const rightH = 344;
+
+    if (slideObj.chart) {
+      _drawVisualChart(ctx, slideObj.chart, rightX, rightY, rightW, rightH, slideObj.color, slideObj.accentAlt);
+    }
+
+    // ── 6. Bullet Points Section (Bottom Full-Width Panel) ─────────────────
+    const bullPanelX = 40;
+    const bullPanelY = 504;
+    const bullPanelW = W - 76;
+    const bullPanelH = 204;
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+    ctx.beginPath();
+    ctx.roundRect(bullPanelX, bullPanelY, bullPanelW, bullPanelH, 10);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.55)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = slideObj.accentAlt || slideObj.color;
+    ctx.font = '800 13px Inter, system-ui, sans-serif';
+    ctx.fillText('KEY SLIDE CLAIMS & AUDIT DISCLOSURES', bullPanelX + 24, bullPanelY + 28);
+
+    if (slideObj.bullets && slideObj.bullets.length > 0) {
+      let curY = bullPanelY + 56;
+      const maxBulletW = bullPanelW - 68;
+      ctx.font = '500 17px Inter, system-ui, sans-serif';
+
+      slideObj.bullets.forEach((b) => {
+        const lines = _wrapCanvasText(ctx, b, maxBulletW);
+        // Bullet dot
+        ctx.fillStyle = slideObj.color;
+        ctx.beginPath();
+        ctx.arc(bullPanelX + 30, curY - 6, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bullet text lines
+        ctx.fillStyle = '#e2e8f0';
+        lines.forEach((line, lineIdx) => {
+          ctx.fillText(line, bullPanelX + 48, curY + lineIdx * 23);
+        });
+        curY += Math.max(44, lines.length * 24 + 14);
+      });
+    }
+
+    // ── 7. Footer Branding ─────────────────────────────────────────────────
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(40, H - 42, W - 76, 1);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '600 13px Inter, system-ui, sans-serif';
+    ctx.fillText('HotSeat AI — Multi-Slide Contradiction Benchmark Deck', 40, H - 16);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = slideObj.color;
+    ctx.fillText('Gemma 4 Multimodal Vision Ready • 1280×768 HD', W - 36, H - 16);
+    ctx.textAlign = 'left';
+  }
+
+  /** Draw visual bar chart or 2x2 competitor matrix + bar graphic inside the slide canvas */
+  function _drawVisualChart(ctx, chart, x, y, w, h, color, accentAlt) {
+    // Card container
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 10);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Chart header
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '800 13px Inter, system-ui, sans-serif';
+    ctx.fillText((chart.title || 'METRICS').toUpperCase(), x + 20, y + 28);
+
+    // If slide has a 2x2 Competitor Matrix, draw the 2x2 quadrant plot on top and bars below
+    if (chart.type === 'matrix' && chart.matrix) {
+      const mX = x + 24;
+      const mY = y + 44;
+      const mW = w - 48;
+      const mH = 165;
+
+      // Quadrant background
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.65)';
+      ctx.beginPath();
+      ctx.roundRect(mX, mY, mW, mH, 8);
+      ctx.fill();
+
+      // Top-right winning quadrant highlight
+      ctx.fillStyle = color + '18';
+      ctx.fillRect(mX + mW / 2, mY, mW / 2, mH / 2);
+
+      // Center axes
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(mX + mW / 2, mY + 8);
+      ctx.lineTo(mX + mW / 2, mY + mH - 8);
+      ctx.moveTo(mX + 8, mY + mH / 2);
+      ctx.lineTo(mX + mW - 8, mY + mH / 2);
+      ctx.stroke();
+
+      // Axis labels
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '700 11px Inter, system-ui, sans-serif';
+      ctx.fillText(chart.matrix.yAxis, mX + 10, mY + 18);
+      ctx.textAlign = 'right';
+      ctx.fillText(chart.matrix.xAxis, mX + mW - 10, mY + mH - 8);
+      ctx.textAlign = 'left';
+
+      // Plot points
+      chart.matrix.points.forEach((pt) => {
+        const px = mX + pt.x * mW;
+        const py = mY + (1 - pt.y) * mH;
+
+        ctx.beginPath();
+        ctx.arc(px, py, pt.highlight ? 7 : 5.5, 0, Math.PI * 2);
+        if (pt.omitted) {
+          ctx.fillStyle = 'rgba(244, 63, 94, 0.25)';
+          ctx.fill();
+          ctx.strokeStyle = '#f43f5e';
+          ctx.setLineDash([3, 3]);
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else {
+          ctx.fillStyle = pt.highlight ? color : '#64748b';
+          ctx.fill();
+        }
+
+        ctx.fillStyle = pt.omitted ? '#fda4af' : (pt.highlight ? '#f8fafc' : '#cbd5e1');
+        ctx.font = pt.highlight || pt.omitted ? '700 11px Inter, system-ui, sans-serif' : '600 11px Inter, system-ui, sans-serif';
+        ctx.textAlign = px > mX + mW * 0.6 ? 'right' : 'left';
+        const labelOffset = px > mX + mW * 0.6 ? -10 : 10;
+        ctx.fillText(pt.name, px + labelOffset, py + 4);
+        ctx.textAlign = 'left';
+      });
+
+      // Mini speed score bars at the bottom of the card
+      _drawBarsInRegion(ctx, chart.bars || [], x + 20, y + 224, w - 40, h - 238, color, accentAlt);
+      return;
+    }
+
+    // Standard bar chart occupying the full card body
+    _drawBarsInRegion(ctx, chart.bars || [], x + 24, y + 48, w - 48, h - 64, color, accentAlt);
+  }
+
+  function _drawBarsInRegion(ctx, bars, x, y, w, h, color, accentAlt) {
+    if (!bars.length) return;
+    const chartTop = y + 18;
+    const chartH = h - 44;
+    const barCount = bars.length;
+    const gap = Math.max(12, Math.floor((w - barCount * 54) / (barCount + 1)));
+    const barW = Math.min(64, Math.floor((w - gap * (barCount + 1)) / barCount));
+    const maxVal = Math.max(...bars.map(b => b.value), 1);
+
+    // Horizontal grid lines
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.45)';
+    ctx.lineWidth = 1;
+    for (let g = 0; g <= 3; g++) {
+      const gy = chartTop + (chartH * g) / 3;
+      ctx.beginPath();
+      ctx.moveTo(x, gy);
+      ctx.lineTo(x + w, gy);
+      ctx.stroke();
+    }
+
+    bars.forEach((b, i) => {
+      const barH = Math.max(8, (b.value / maxVal) * (chartH - 12));
+      const bx = x + gap + i * (barW + gap);
+      const by = chartTop + chartH - barH;
+
+      const bGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
+      bGrad.addColorStop(0, accentAlt || color);
+      bGrad.addColorStop(1, color + '55');
+      ctx.fillStyle = bGrad;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, barW, barH, [6, 6, 0, 0]);
+      ctx.fill();
+
+      // Bar value label
+      const valStr = b.suffix ? `${b.value}${b.suffix}` : String(b.value);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '800 13px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(valStr, bx + barW / 2, by - 7);
+
+      // Bar category label
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 12px Inter, system-ui, sans-serif';
+      ctx.fillText(b.label, bx + barW / 2, chartTop + chartH + 20);
+      ctx.textAlign = 'left';
+    });
+  }
+
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Load Sample Deck
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function loadSampleDeck(deckKey) {
     const deck = SAMPLE_DECKS[deckKey];
     if (!deck) return;
-    slides = [];
-    deck.forEach((slide, idx) => {
-      slides.push({ type: 'sample', data: slide, label: `Slide ${idx + 1}` });
-    });
+    slides = deck.map((slide, idx) => ({
+      type: 'sample',
+      data: slide,
+      label: `Slide ${idx + 1} of ${deck.length}`,
+    }));
     currentSlide = 0;
     renderCurrentSlide();
     document.getElementById('slideEmptyState').classList.add('hidden');
   }
 
-  function renderSampleSlide(slide) {
-    const canvas = document.getElementById('slideCanvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 800; canvas.height = 480;
 
-    // Background gradient
-    const bg = ctx.createLinearGradient(0, 0, 800, 480);
-    bg.addColorStop(0, '#0f172a');
-    bg.addColorStop(1, '#1e293b');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, 800, 480);
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  File Upload — Client-Side Canvas Image Downscaler + PDF.js Rasterizer
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const MAX_SLIDE_WIDTH = 1280;
+  const JPEG_QUALITY = 0.82;
+  const MAX_PDF_PAGES = 8;
 
-    // Accent bar
-    ctx.fillStyle = slide.color;
-    ctx.fillRect(0, 0, 6, 480);
-
-    // Top accent line
-    const grad = ctx.createLinearGradient(0, 0, 800, 0);
-    grad.addColorStop(0, slide.color);
-    grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 800, 2);
-
-    // Title
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 28px Inter, system-ui, sans-serif';
-    ctx.fillText(slide.title, 40, 65);
-
-    // Subtitle
-    ctx.fillStyle = slide.color;
-    ctx.font = '500 16px Inter, system-ui, sans-serif';
-    ctx.fillText(slide.subtitle, 40, 95);
-
-    // Divider
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(40, 115, 720, 1);
-
-    // Metrics cards
-    slide.metrics.forEach((metric, i) => {
-      const y = 140 + i * 78;
-      // Card bg
-      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
-      ctx.beginPath();
-      ctx.roundRect(40, y, 720, 62, 8);
-      ctx.fill();
-      // Card left accent
-      ctx.fillStyle = slide.color + '40';
-      ctx.beginPath();
-      ctx.roundRect(40, y, 4, 62, [8, 0, 0, 8]);
-      ctx.fill();
-      // Metric text
-      const parts = metric.split(': ');
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '600 13px Inter, system-ui, sans-serif';
-      ctx.fillText(parts[0], 60, y + 26);
-      ctx.fillStyle = '#f1f5f9';
-      ctx.font = 'bold 20px Inter, system-ui, sans-serif';
-      ctx.fillText(parts[1] || '', 60, y + 50);
-    });
-
-    // Branding
-    ctx.fillStyle = '#475569';
-    ctx.font = '500 10px Inter, system-ui, sans-serif';
-    ctx.fillText('HotSeat AI — Sample Pitch Deck', 40, 468);
+  /** Convert a base64 Data URL (image/jpeg) into a binary Blob for FormData upload */
+  function dataUrlToBlob(dataUrl) {
+    const parts = dataUrl.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const binary = atob(parts[1]);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i);
+    }
+    return new Blob([array], { type: mime });
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  File Upload — PDF & Image handling
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function handleFileUpload(event) {
-    const files = event.target.files;
+    const files = Array.from(event.target.files || []);
     if (!files.length) return;
     slides = [];
 
+    const indicator = document.getElementById('slideIndicator');
+    if (indicator) indicator.textContent = 'Processing slides...';
+
     for (const file of files) {
-      if (file.type === 'application/pdf') {
+      const lowerName = (file.name || '').toLowerCase();
+      const isPdf = file.type === 'application/pdf' || lowerName.endsWith('.pdf');
+      const isImage =
+        file.type.startsWith('image/') ||
+        /\.(png|jpe?g|webp)$/i.test(lowerName);
+
+      if (isPdf) {
         await loadPDF(file);
-      } else if (file.type.startsWith('image/')) {
-        await loadImage(file);
+      } else if (isImage) {
+        await loadImageDownscaled(file);
       }
     }
 
@@ -526,77 +1223,193 @@
       currentSlide = 0;
       renderCurrentSlide();
       document.getElementById('slideEmptyState').classList.add('hidden');
+    } else if (indicator) {
+      indicator.textContent = 'Slide 0 of 0';
     }
+
+    // Reset file input so re-uploading the same file triggers onchange
+    event.target.value = '';
   }
 
+  /**
+   * PDF.js Multi-Page Rasterizer.
+   * Renders up to the first 8 pages of a PDF into 1280px JPEG data URLs in browser memory
+   * so zero server-side PDF libraries are needed.
+   */
   async function loadPDF(file) {
     const arrayBuffer = await file.arrayBuffer();
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
 
-    for (let i = 1; i <= pdf.numPages; i++) {
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pageCount = Math.min(pdf.numPages, MAX_PDF_PAGES);
+
+    for (let i = 1; i <= pageCount; i++) {
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 2 });
+      const baseViewport = page.getViewport({ scale: 1.0 });
+      const targetScale = MAX_SLIDE_WIDTH / baseViewport.width;
+      const viewport = page.getViewport({ scale: targetScale });
+
       const offscreen = document.createElement('canvas');
-      offscreen.width = viewport.width;
-      offscreen.height = viewport.height;
+      offscreen.width = Math.round(viewport.width);
+      offscreen.height = Math.round(viewport.height);
       const ctx = offscreen.getContext('2d');
+
+      // White page background before rendering PDF page
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+
       await page.render({ canvasContext: ctx, viewport }).promise;
 
-      const blob = await new Promise(r => offscreen.toBlob(r, 'image/png'));
-      slides.push({ type: 'image', data: blob, label: `Slide ${slides.length + 1}` });
+      // Export as 1280px compressed image/jpeg (0.82 quality) data URL in browser memory
+      const dataUrl = offscreen.toDataURL('image/jpeg', JPEG_QUALITY);
+      const blob = dataUrlToBlob(dataUrl);
+      slides.push({
+        type: 'image',
+        dataUrl,
+        data: blob,
+        label: `Page ${i} of ${pageCount}`,
+      });
     }
   }
 
-  async function loadImage(file) {
-    slides.push({ type: 'image', data: file, label: `Slide ${slides.length + 1}` });
+  /**
+   * Client-Side Canvas Image Downscaler.
+   * Loads uploaded images (.png, .jpg, .webp) onto an offscreen canvas capped at
+   * max width 1280px, exports as compressed image/jpeg (0.82 quality), and stores
+   * in the active slide deck array.
+   */
+  async function loadImageDownscaled(file) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        const offscreen = document.createElement('canvas');
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+
+        if (w > MAX_SLIDE_WIDTH) {
+          const ratio = MAX_SLIDE_WIDTH / w;
+          w = MAX_SLIDE_WIDTH;
+          h = Math.round(h * ratio);
+        }
+
+        offscreen.width = w;
+        offscreen.height = h;
+        const ctx = offscreen.getContext('2d');
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+
+        const dataUrl = offscreen.toDataURL('image/jpeg', JPEG_QUALITY);
+        const blob = dataUrlToBlob(dataUrl);
+        slides.push({
+          type: 'image',
+          dataUrl,
+          data: blob,
+          label: `Slide ${slides.length + 1}`,
+        });
+
+        URL.revokeObjectURL(objectUrl);
+        resolve();
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve();
+      };
+
+      img.src = objectUrl;
+    });
   }
 
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Slide Navigation & Rendering
+  //  Slide Navigation & Redrawing #slideCanvas
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function renderCurrentSlide() {
     if (slides.length === 0) return;
     const slide = slides[currentSlide];
 
     if (slide.type === 'sample') {
-      renderSampleSlide(slide.data);
+      drawSlideToCanvas(slide.data);
     } else {
       const canvas = document.getElementById('slideCanvas');
       const ctx = canvas.getContext('2d');
+      const W = 1280, H = 768;
       const img = new Image();
+
       img.onload = () => {
-        canvas.width = 800; canvas.height = 480;
+        canvas.width = W;
+        canvas.height = H;
         ctx.fillStyle = '#0f172a';
-        ctx.fillRect(0, 0, 800, 480);
-        const scale = Math.min(800 / img.width, 480 / img.height);
-        const w = img.width * scale, h = img.height * scale;
-        ctx.drawImage(img, (800 - w) / 2, (480 - h) / 2, w, h);
+        ctx.fillRect(0, 0, W, H);
+        const scale = Math.min(W / img.width, H / img.height);
+        const drawW = Math.round(img.width * scale);
+        const drawH = Math.round(img.height * scale);
+        ctx.drawImage(img, Math.round((W - drawW) / 2), Math.round((H - drawH) / 2), drawW, drawH);
       };
-      img.src = URL.createObjectURL(slide.data);
+
+      if (slide.dataUrl) {
+        img.src = slide.dataUrl;
+      } else if (typeof slide.data === 'string') {
+        img.src = slide.data;
+      } else if (slide.data instanceof Blob) {
+        const tempUrl = URL.createObjectURL(slide.data);
+        const origOnload = img.onload;
+        img.onload = () => {
+          origOnload();
+          URL.revokeObjectURL(tempUrl);
+        };
+        img.src = tempUrl;
+      }
     }
 
-    document.getElementById('slideIndicator').textContent = `Slide ${currentSlide + 1} of ${slides.length}`;
+    document.getElementById('slideIndicator').textContent =
+      `Slide ${currentSlide + 1} of ${slides.length}`;
   }
 
-  function prevSlide() { if (currentSlide > 0) { currentSlide--; renderCurrentSlide(); } }
-  function nextSlide() { if (currentSlide < slides.length - 1) { currentSlide++; renderCurrentSlide(); } }
+  function prevSlide() {
+    if (slides.length === 0) return;
+    currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+    renderCurrentSlide();
+  }
+
+  function nextSlide() {
+    if (slides.length === 0) return;
+    currentSlide = (currentSlide + 1) % slides.length;
+    renderCurrentSlide();
+  }
+
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Get canvas as Blob for upload
+  //  Get canvas / slide as JPEG Blob for upload to /api/interrogate
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function getSlideBlob() {
     return new Promise((resolve) => {
       const slide = slides[currentSlide];
-      if (!slide) { resolve(null); return; }
+      if (!slide) {
+        resolve(null);
+        return;
+      }
 
       if (slide.type === 'image') {
-        resolve(slide.data);
-      } else {
-        // Sample slide — export canvas
-        const canvas = document.getElementById('slideCanvas');
-        canvas.toBlob(blob => resolve(blob), 'image/png');
+        if (slide.data instanceof Blob) {
+          resolve(slide.data);
+          return;
+        }
+        if (slide.dataUrl) {
+          resolve(dataUrlToBlob(slide.dataUrl));
+          return;
+        }
       }
+
+      // Sample slide (or fallback) — export #slideCanvas as compressed JPEG
+      const canvas = document.getElementById('slideCanvas');
+      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', JPEG_QUALITY);
     });
   }
 
@@ -605,7 +1418,7 @@
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function callInterrogate(slideBlob, userMessage) {
     const fd = new FormData();
-    if (slideBlob) fd.append('slide_image', slideBlob, 'slide.png');
+    if (slideBlob) fd.append('slide_image', slideBlob, 'slide.jpg');
     fd.append('slide_number', String(currentSlide + 1));
     fd.append('user_message', userMessage);
     fd.append('persona', document.getElementById('personaSelect').value);
@@ -1108,14 +1921,10 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Init — draw empty state on canvas
+  //  Init — load default sample deck onto #slideCanvas
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   (function init() {
-    const canvas = document.getElementById('slideCanvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 800; canvas.height = 480;
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, 800, 480);
+    loadSampleDeck('fintech');
   })();
   </script>
 
