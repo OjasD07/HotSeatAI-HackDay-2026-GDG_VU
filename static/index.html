@@ -270,14 +270,15 @@
       <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-3 flex items-end gap-2 card-glow">
         <button id="micBtn" onclick="toggleMic()"
           class="flex-shrink-0 w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-lg hover:bg-slate-700 transition-all"
-          title="Push to Talk">
+          title="Push to Talk (Instant Barge-In)">
           🎙️
         </button>
         <textarea id="userInput" rows="2"
           placeholder="Speak via mic or type your defense to the VC..."
           class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 resize-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 placeholder:text-slate-600"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDefense()}"></textarea>
-        <button id="sendBtn" onclick="sendDefense()"
+          oninput="if(window.speechSynthesis){window.speechSynthesis.cancel()}"
+          onkeydown="if(window.speechSynthesis){window.speechSynthesis.cancel()} if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFounderReply()}"></textarea>
+        <button id="sendBtn" onclick="sendFounderReply()"
           class="flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.97]">
           Send Defense ↵
         </button>
@@ -331,7 +332,7 @@
             <!-- 4 Score Bars -->
             <div class="space-y-2">
               <div>
-                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Market Timing</span><span id="scoreMarket" class="text-emerald-400 font-bold">0</span></div>
+                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Market &amp; Timing</span><span id="scoreMarket" class="text-emerald-400 font-bold">0</span></div>
                 <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="barMarket" class="score-bar h-full rounded-full bg-emerald-500" style="width:0%"></div></div>
               </div>
               <div>
@@ -370,11 +371,13 @@
 
         <!-- Tab 2: SKILL.md -->
         <div id="skillPanel" class="flex-1 overflow-y-auto p-4 hidden">
-          <button onclick="downloadSkillMd()"
+          <button id="downloadSkillBtn" onclick="downloadSkill()"
             class="w-full mb-3 px-3 py-2 rounded-lg text-xs font-bold bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all">
             ⬇ Download SKILL.md
           </button>
-          <pre id="skillContent" class="text-[11px] text-slate-400 whitespace-pre-wrap font-mono leading-relaxed">SKILL.md will auto-update as you interrogate slides.</pre>
+          <div id="skillPreview">
+            <pre id="skillContent" class="text-[11px] text-slate-400 whitespace-pre-wrap font-mono leading-relaxed">SKILL.md will auto-update as you interrogate slides.</pre>
+          </div>
         </div>
       </div>
     </section>
@@ -1386,41 +1389,56 @@
 
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Get canvas / slide as JPEG Blob for upload to /api/interrogate
+  //  Get #slideCanvas as JPEG Blob (0.82 quality) for POST /api/interrogate
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function getSlideBlob() {
     return new Promise((resolve) => {
+      const canvas = document.getElementById('slideCanvas');
+      if (canvas && typeof canvas.toBlob === 'function') {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+              return;
+            }
+            const slide = slides[currentSlide];
+            if (slide && slide.data instanceof Blob) {
+              resolve(slide.data);
+            } else if (slide && slide.dataUrl) {
+              resolve(dataUrlToBlob(slide.dataUrl));
+            } else {
+              resolve(null);
+            }
+          },
+          'image/jpeg',
+          JPEG_QUALITY
+        );
+        return;
+      }
+
       const slide = slides[currentSlide];
       if (!slide) {
         resolve(null);
         return;
       }
-
-      if (slide.type === 'image') {
-        if (slide.data instanceof Blob) {
-          resolve(slide.data);
-          return;
-        }
-        if (slide.dataUrl) {
-          resolve(dataUrlToBlob(slide.dataUrl));
-          return;
-        }
+      if (slide.data instanceof Blob) {
+        resolve(slide.data);
+      } else if (slide.dataUrl) {
+        resolve(dataUrlToBlob(slide.dataUrl));
+      } else {
+        resolve(null);
       }
-
-      // Sample slide (or fallback) — export #slideCanvas as compressed JPEG
-      const canvas = document.getElementById('slideCanvas');
-      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', JPEG_QUALITY);
     });
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  API Calls
+  //  API Calls & Skeleton Loading State
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function callInterrogate(slideBlob, userMessage) {
     const fd = new FormData();
     if (slideBlob) fd.append('slide_image', slideBlob, 'slide.jpg');
     fd.append('slide_number', String(currentSlide + 1));
-    fd.append('user_message', userMessage);
+    fd.append('user_message', userMessage || '');
     fd.append('persona', document.getElementById('personaSelect').value);
     fd.append('provider', document.getElementById('providerSelect').value);
     fd.append('api_key', document.getElementById('apiKeyInput').value);
@@ -1429,38 +1447,87 @@
     return resp.json();
   }
 
+  function showInterrogationSkeleton(slideNum) {
+    removeInterrogationSkeleton();
+    const feed = document.getElementById('chatFeed');
+    const empty = feed.querySelector('.justify-center');
+    if (empty) empty.remove();
+
+    const skel = document.createElement('div');
+    skel.id = 'vcLoadingSkeleton';
+    skel.className = 'flex gap-2.5 items-start animate-pulse';
+    skel.innerHTML = `
+      <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-sm">🦈</div>
+      <div class="flex-1 bg-slate-800/75 rounded-lg rounded-tl-none px-3.5 py-3 border border-emerald-500/25 space-y-2">
+        <div class="text-xs font-semibold text-emerald-400">
+          🦈 VC is inspecting Slide ${slideNum} pixels &amp; cross-checking your Claim Ledger...
+        </div>
+        <div class="h-2 bg-slate-700/80 rounded w-5/6"></div>
+        <div class="h-2 bg-slate-700/60 rounded w-3/5"></div>
+      </div>`;
+    feed.appendChild(skel);
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function removeInterrogationSkeleton() {
+    const existing = document.getElementById('vcLoadingSkeleton');
+    if (existing) existing.remove();
+  }
+
   async function resetSession() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     await fetch('/api/reset', { method: 'POST' });
+
     // Reset UI
     document.getElementById('chatFeed').innerHTML = `
       <div class="flex justify-center py-8">
         <span class="text-xs text-slate-600 italic">Session reset. Upload a slide to start.</span>
       </div>`;
-    updateTelemetry({ conviction_score: 50, evasion_strikes: 0, detected_industry: 'Detecting...', business_model: 'Analyzing...' }, 0);
-    document.getElementById('visualClaimsList').innerHTML = '<p class="italic text-slate-600">No claims extracted yet.</p>';
-    document.getElementById('claimLedgerList').innerHTML = '<p class="italic text-slate-600 py-4 text-center">Claims will appear here.</p>';
+    updateTelemetry(
+      {
+        conviction_score: 50,
+        evasion_strikes: 0,
+        detected_industry: 'Detecting...',
+        business_model: 'Analyzing...',
+      },
+      0
+    );
+    document.getElementById('visualClaimsList').innerHTML =
+      '<p class="italic text-slate-600">No claims extracted yet.</p>';
+    document.getElementById('claimLedgerList').innerHTML =
+      '<p class="italic text-slate-600 py-4 text-center">Claims will appear here.</p>';
     document.getElementById('verdictContent').classList.add('hidden');
-    document.getElementById('skillContent').textContent = 'SKILL.md will auto-update as you interrogate slides.';
+    document.getElementById('skillContent').textContent =
+      'SKILL.md will auto-update as you interrogate slides.';
     document.getElementById('simChipsContainer').classList.add('opacity-40', 'pointer-events-none');
     document.getElementById('turnCount').textContent = 'Turn 0';
-    lastSimStrong = ''; lastSimEvasive = '';
+    lastSimStrong = '';
+    lastSimEvasive = '';
+    fetchSkillPreview();
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Pitch Current Slide
+  //  1. pitchCurrentSlide() & sendFounderReply()
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function pitchCurrentSlide() {
     if (slides.length === 0) return;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
 
+    const slideNum = currentSlide + 1;
     const btn = document.getElementById('pitchSlideBtn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="animate-pulse">🔄 Gemma 4 is analyzing slide...</span>';
+    btn.innerHTML = `<span class="animate-pulse">🦈 Inspecting Slide ${slideNum}...</span>`;
+
+    appendChat('founder', `[Pitched Slide ${slideNum} to the VC]`, 'pitch');
+    showInterrogationSkeleton(slideNum);
 
     try {
       const blob = await getSlideBlob();
       const data = await callInterrogate(blob, '');
+      removeInterrogationSkeleton();
       handleInterrogationResponse(data, true);
     } catch (e) {
+      removeInterrogationSkeleton();
       appendChat('system', `⚠️ Error: ${e.message}`, 'error');
     } finally {
       btn.disabled = false;
@@ -1468,10 +1535,9 @@
     }
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Send Defense (text reply)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  async function sendDefense() {
+  async function sendFounderReply() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
     const input = document.getElementById('userInput');
     const msg = input.value.trim();
     if (!msg) return;
@@ -1479,14 +1545,20 @@
     input.value = '';
     appendChat('founder', msg, 'defense');
 
+    const slideNum = currentSlide + 1;
     const btn = document.getElementById('sendBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="animate-pulse">⏳</span>';
 
+    showInterrogationSkeleton(slideNum);
+
     try {
-      const data = await callInterrogate(null, msg);
+      const blob = await getSlideBlob();
+      const data = await callInterrogate(blob, msg);
+      removeInterrogationSkeleton();
       handleInterrogationResponse(data, false);
     } catch (e) {
+      removeInterrogationSkeleton();
       appendChat('system', `⚠️ Error: ${e.message}`, 'error');
     } finally {
       btn.disabled = false;
@@ -1494,28 +1566,68 @@
     }
   }
 
+  // Backward-compatible alias
+  const sendDefense = sendFounderReply;
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Handle interrogation response
+  //  Handle Interrogation Response
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function handleInterrogationResponse(data, isSlideUpload) {
     const session = data.session || {};
 
-    // VC spoken response
-    let vcHtml = data.vc_spoken_response || '';
-
-    // Contradiction callout
-    if (data.contradiction_detected && data.contradiction_detail) {
-      vcHtml += `<div class="contradiction-box mt-2 p-2 rounded text-[11px] text-rose-300">
-        <span class="font-bold text-rose-400">⚠️ CONTRADICTION:</span> ${escapeHtml(data.contradiction_detail)}
-      </div>`;
+    // Update Detected Industry & Business Model pills in Left Panel
+    const detectedIndustry = data.detected_industry || session.detected_industry;
+    const businessModel = data.business_model || session.business_model;
+    if (detectedIndustry) {
+      document.getElementById('industryPill').textContent = detectedIndustry;
+    }
+    if (businessModel) {
+      document.getElementById('bizModelPill').textContent = businessModel;
     }
 
-    // Evasion callout
-    if (data.evasion_detected && !data.contradiction_detected) {
-      vcHtml += `<div class="contradiction-box mt-2 p-2 rounded text-[11px] text-amber-300" style="border-left-color: #f59e0b;">
-        <span class="font-bold text-amber-400">🚨 EVASION DETECTED:</span> The VC noticed a non-answer.
-      </div>`;
+    // Update Visual Claims in Left Panel
+    if (Array.isArray(data.visual_claims) && data.visual_claims.length > 0) {
+      updateVisualClaims(data.visual_claims);
     }
+
+    // Determine attack_vector_badge
+    const attackVectorBadge =
+      data.attack_vector_badge ||
+      (data.contradiction_detected
+        ? '🎯 Cross-Slide Contradiction Audit'
+        : data.evasion_detected
+          ? '🚨 Founder Evasion Callout'
+          : isSlideUpload
+            ? `🔍 ${businessModel || 'Unit Economics'} Stress-Test`
+            : '⚡ Unit Economics & Moat Interrogation');
+
+    // Build VC card body with attack_vector_badge, crimson Contradiction Caught banner, and vc_spoken_response
+    let vcHtml = `
+      <div class="mb-2 flex flex-wrap items-center gap-1.5">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+          ${escapeHtml(attackVectorBadge)}
+        </span>
+      </div>`;
+
+    if (data.contradiction_detected) {
+      const detail =
+        data.contradiction_detail ||
+        'Cross-slide numerical or strategic conflict detected against your Claim Ledger.';
+      vcHtml += `
+        <div class="contradiction-box mb-2.5 p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/40 text-xs text-rose-200">
+          <div class="font-extrabold text-rose-400 uppercase tracking-wide text-[11px] mb-0.5">
+            🚨 Contradiction Caught
+          </div>
+          <div>${escapeHtml(detail)}</div>
+        </div>`;
+    } else if (data.evasion_detected) {
+      vcHtml += `
+        <div class="contradiction-box mb-2.5 p-2 rounded-lg text-[11px] text-amber-200" style="border-left-color: #f59e0b; background: rgba(245,158,11,0.12);">
+          <span class="font-bold text-amber-400">🚨 EVASION DETECTED:</span> The VC flagged a non-answer or buzzword dodge.
+        </div>`;
+    }
+
+    vcHtml += `<div class="text-slate-100 leading-relaxed">${escapeHtml(data.vc_spoken_response || '')}</div>`;
 
     // Persona badge
     const personaNames = {
@@ -1524,35 +1636,43 @@
       enterprise_buyer: '🏢 Enterprise Buyer',
       demo_day_judge: '🏆 Demo Judge',
     };
-    const personaLabel = personaNames[data.turn?.persona] || '🦈 VC';
+    const personaKey = data.turn?.persona || document.getElementById('personaSelect').value;
+    const personaLabel = personaNames[personaKey] || '🦈 VC';
     appendChat('vc', vcHtml, 'interrogation', personaLabel);
 
-    // TTS
-    if (ttsEnabled && data.vc_spoken_response) {
-      speak(data.vc_spoken_response);
+    // Speak VC response via Web Speech API TTS
+    if (data.vc_spoken_response) {
+      speakVCResponse(data.vc_spoken_response);
     }
 
-    // Update telemetry
+    // Animate Conviction Score, Delta Badge, Skepticism Heat, and Strikes
     updateTelemetry(session, data.conviction_delta || 0);
 
-    // Visual claims
-    if (data.visual_claims && data.visual_claims.length > 0) {
-      updateVisualClaims(data.visual_claims);
-    }
-
-    // Claim ledger
+    // Update Right Panel Cross-Slide Claim Ledger
     updateClaimLedger(session.claim_ledger || []);
 
-    // Simulated replies
-    lastSimStrong = data.simulated_strong_reply || '';
-    lastSimEvasive = data.simulated_evasive_reply || '';
+    // Update 1-Click Judge Simulation Chips
+    lastSimStrong =
+      data.simulated_strong_reply && data.simulated_strong_reply !== 'N/A'
+        ? data.simulated_strong_reply
+        : 'Our cohort data across 1,400 active users shows an audited CAC of $18 with a 4.2-month payback period, and we are standardizing Slide 2 to reflect net contribution margins after channel fees.';
+    lastSimEvasive =
+      data.simulated_evasive_reply && data.simulated_evasive_reply !== 'N/A'
+        ? data.simulated_evasive_reply
+        : 'We are leveraging our proprietary AI flywheel and hyper-viral community synergies to transcend traditional unit economics.';
+
+    const simStrongBtn = document.getElementById('simStrongBtn');
+    const simEvasiveBtn = document.getElementById('simEvasiveBtn');
+    if (simStrongBtn) simStrongBtn.title = lastSimStrong;
+    if (simEvasiveBtn) simEvasiveBtn.title = lastSimEvasive;
+
     const simContainer = document.getElementById('simChipsContainer');
     simContainer.classList.remove('opacity-40', 'pointer-events-none');
 
     // Turn count
     document.getElementById('turnCount').textContent = `Turn ${session.history?.length || 0}`;
 
-    // Auto-update SKILL.md preview
+    // Refresh #skillPreview tab via GET /api/skill
     fetchSkillPreview();
   }
 
@@ -1561,7 +1681,6 @@
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function appendChat(role, content, type, label) {
     const feed = document.getElementById('chatFeed');
-    // Remove empty state
     const empty = feed.querySelector('.justify-center');
     if (empty) empty.remove();
 
@@ -1603,18 +1722,17 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Telemetry Updates
+  //  Telemetry Updates (Conviction Score, Delta, Skepticism Heat, Strikes)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function updateTelemetry(session, delta) {
     const score = session.conviction_score ?? 50;
     const strikes = session.evasion_strikes ?? 0;
 
-    // Conviction
+    // Conviction Score & Progress Bar
     document.getElementById('convictionValue').textContent = score;
-    document.getElementById('convictionBar').style.width = score + '%';
-
-    // Color the bar based on score
     const bar = document.getElementById('convictionBar');
+    bar.style.width = score + '%';
+
     if (score >= 68) {
       bar.className = 'conviction-bar h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400';
     } else if (score >= 45) {
@@ -1623,24 +1741,24 @@
       bar.className = 'conviction-bar h-full rounded-full bg-gradient-to-r from-rose-500 to-rose-400';
     }
 
-    // Delta badge
+    // +Δ (emerald) or -Δ (rose) Delta Badge
     const deltaEl = document.getElementById('convictionDelta');
     const sign = delta > 0 ? '+' : '';
-    deltaEl.textContent = sign + delta;
+    deltaEl.textContent = `${sign}${delta}`;
     if (delta > 0) {
-      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400';
+      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25';
     } else if (delta < 0) {
-      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-400';
+      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/25';
     } else {
       deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-500';
     }
 
-    // Skepticism heat
+    // Skepticism Heat
     const badge = document.getElementById('skepticismBadge');
-    if (strikes >= 3) {
+    if (strikes >= 3 || score < 35) {
       badge.textContent = '🔥 HOSTILE DILIGENCE';
       badge.className = 'inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/20 mt-1 animate-pulse';
-    } else if (strikes >= 1) {
+    } else if (strikes >= 1 || score < 50) {
       badge.textContent = '⚡ HIGH SKEPTICISM';
       badge.className = 'inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20 mt-1';
     } else {
@@ -1648,12 +1766,12 @@
       badge.className = 'inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 mt-1';
     }
 
-    // Strike dots
+    // Strike Dots
     document.getElementById('strikesValue').textContent = strikes;
     for (let i = 1; i <= 3; i++) {
       const dot = document.getElementById('strike' + i);
       if (i <= strikes) {
-        dot.className = 'w-3 h-3 rounded-full bg-rose-500 border border-rose-400';
+        dot.className = 'w-3 h-3 rounded-full bg-rose-500 border border-rose-400 shadow-sm shadow-rose-500/50';
       } else {
         dot.className = 'w-3 h-3 rounded-full bg-slate-700 border border-slate-600';
       }
@@ -1669,57 +1787,69 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Visual Claims
+  //  Visual Claims & Cross-Slide Claim Ledger
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function updateVisualClaims(claims) {
     const el = document.getElementById('visualClaimsList');
-    el.innerHTML = claims.map((c, i) => `
+    el.innerHTML = claims
+      .map(
+        (c, i) => `
       <div class="flex items-start gap-2 p-2 rounded-lg bg-slate-800/40 border border-slate-700/30">
         <span class="flex-shrink-0 w-5 h-5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold flex items-center justify-center">${i + 1}</span>
         <span class="text-slate-300 text-[11px] leading-relaxed">${escapeHtml(c)}</span>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Claim Ledger
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function updateClaimLedger(ledger) {
     const el = document.getElementById('claimLedgerList');
     if (!ledger.length) {
       el.innerHTML = '<p class="italic text-slate-600 py-4 text-center">Claims will appear here.</p>';
       return;
     }
-    el.innerHTML = ledger.map(c => {
-      const sourceColor = c.source === 'Visual Slide'
-        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
-        : 'bg-violet-500/15 text-violet-400 border-violet-500/20';
-      return `
+    el.innerHTML = ledger
+      .map((c) => {
+        const sourceColor =
+          c.source === 'Visual Slide'
+            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
+            : 'bg-violet-500/15 text-violet-400 border-violet-500/20';
+        return `
         <div class="flex items-start gap-1.5 p-1.5 rounded bg-slate-800/30">
           <span class="flex-shrink-0 px-1 py-0.5 rounded text-[9px] font-bold bg-slate-700 text-slate-400">S${c.slide}</span>
           <span class="flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${sourceColor}">${c.source === 'Visual Slide' ? '👁' : '🗣'}</span>
           <span class="text-[11px] text-slate-400 leading-snug">${escapeHtml(c.claim)}</span>
         </div>`;
-    }).join('');
+      })
+      .join('');
     el.scrollTop = el.scrollHeight;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Simulated Replies
+  //  1-Click Judge Simulation Chips (Populate #userInput & Auto-Submit)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function simulateReply(type) {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     const msg = type === 'strong' ? lastSimStrong : lastSimEvasive;
     if (!msg || msg === 'N/A') return;
-    document.getElementById('userInput').value = msg;
+    const input = document.getElementById('userInput');
+    input.value = msg;
+    sendFounderReply();
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Verdict
+  //  3. Final Investment Committee Verdict & Term Sheet (generateVerdict)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function generateVerdict() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    // Switch Right Panel to Tab 1 (VC Verdict Memo)
+    switchTab('verdict');
+
     const btn = document.getElementById('generateVerdictBtn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="animate-pulse">⏳ Generating IC Memo...</span>';
+    btn.innerHTML = '<span class="animate-pulse">⏳ Generating IC Verdict &amp; Term Sheet...</span>';
 
     try {
       const fd = new FormData();
@@ -1732,39 +1862,38 @@
       const content = document.getElementById('verdictContent');
       content.classList.remove('hidden');
 
-      // Decision badge
+      // Decision badge (TERM SHEET OFFERED / CONDITIONAL SECOND MEETING / HARD PASS)
       const decBox = document.getElementById('verdictDecisionBox');
       const dec = data.decision || 'HARD PASS';
       document.getElementById('verdictDecision').textContent = dec;
       document.getElementById('verdictHeadline').textContent = data.headline_offer_or_reason || '';
 
       if (dec === 'TERM SHEET OFFERED') {
-        decBox.className = 'text-center py-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10';
+        decBox.className = 'text-center py-3 px-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10';
         document.getElementById('verdictDecision').className = 'text-sm font-black text-emerald-400';
       } else if (dec === 'CONDITIONAL SECOND MEETING') {
-        decBox.className = 'text-center py-3 rounded-lg border border-amber-500/30 bg-amber-500/10';
+        decBox.className = 'text-center py-3 px-2 rounded-lg border border-amber-500/30 bg-amber-500/10';
         document.getElementById('verdictDecision').className = 'text-sm font-black text-amber-400';
       } else {
-        decBox.className = 'text-center py-3 rounded-lg border border-rose-500/30 bg-rose-500/10';
+        decBox.className = 'text-center py-3 px-2 rounded-lg border border-rose-500/30 bg-rose-500/10';
         document.getElementById('verdictDecision').className = 'text-sm font-black text-rose-400';
       }
 
-      // Scores
+      // 4 Score Progress Bars
       const scores = data.scores || {};
       setScoreBar('Market', scores.market_timing);
       setScoreBar('Econ', scores.unit_economics);
       setScoreBar('Moat', scores.defensibility_moat);
       setScoreBar('Founder', scores.founder_conviction);
 
-      // Strength & Flaw
+      // Biggest Strength & Fatal Flaw
       document.getElementById('verdictStrength').textContent = data.biggest_strength || 'N/A';
       document.getElementById('verdictFlaw').textContent = data.fatal_flaw || 'N/A';
 
-      // Fixes
+      // Mandatory Deck Fixes
       const fixesList = document.getElementById('verdictFixes');
       const fixes = data.mandatory_deck_fixes || [];
-      fixesList.innerHTML = fixes.map(f => `<li class="py-0.5">${escapeHtml(f)}</li>`).join('');
-
+      fixesList.innerHTML = fixes.map((f) => `<li class="py-0.5">${escapeHtml(f)}</li>`).join('');
     } catch (e) {
       appendChat('system', `⚠️ Verdict error: ${e.message}`, 'error');
     } finally {
@@ -1774,42 +1903,66 @@
   }
 
   function setScoreBar(suffix, value) {
-    const v = value ?? 0;
+    const v = Math.max(0, Math.min(100, Number(value ?? 0)));
     document.getElementById('score' + suffix).textContent = v;
-    // Use requestAnimationFrame for smooth animation
     requestAnimationFrame(() => {
       document.getElementById('bar' + suffix).style.width = v + '%';
     });
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  SKILL.md
+  //  SKILL.md Preview & Export (fetchSkillPreview / downloadSkill)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function fetchSkillPreview() {
     try {
       const resp = await fetch('/api/skill');
       const text = await resp.text();
       lastSkillMd = text;
-      document.getElementById('skillContent').textContent = text;
+      const skillContentEl = document.getElementById('skillContent');
+      if (skillContentEl) skillContentEl.textContent = text;
     } catch (e) {
       console.warn('Skill preview fetch failed', e);
     }
   }
 
-  function downloadSkillMd() {
-    if (!lastSkillMd) { fetchSkillPreview(); return; }
-    const blob = new Blob([lastSkillMd], { type: 'text/markdown' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'SKILL.md';
-    a.click();
+  async function downloadSkill() {
+    try {
+      // Write live .claude/skills/pitch-defense/SKILL.md to disk and retrieve latest markdown
+      const resp = await fetch('/api/skill', { method: 'POST' });
+      if (resp.ok) {
+        const payload = await resp.json();
+        if (payload.skill_md) {
+          lastSkillMd = payload.skill_md;
+          const skillContentEl = document.getElementById('skillContent');
+          if (skillContentEl) skillContentEl.textContent = lastSkillMd;
+        }
+      }
+    } catch (e) {
+      console.warn('POST /api/skill failed, falling back to GET /api/skill', e);
+    }
 
-    // Also trigger disk write
-    fetch('/api/skill', { method: 'POST' }).catch(() => {});
+    if (!lastSkillMd) {
+      await fetchSkillPreview();
+    }
+
+    const blob = new Blob([lastSkillMd || '# HotSeat Pitch-Defense Skill\n'], {
+      type: 'text/markdown;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'SKILL.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
+  // Backward-compatible alias
+  const downloadSkillMd = downloadSkill;
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Tab Switching
+  //  Tab Switching (Tab 1: Verdict Memo / Tab 2: Self-Improving SKILL.md)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function switchTab(tab) {
     const tabVerdict = document.getElementById('tabVerdict');
@@ -1832,7 +1985,7 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  TTS (Text-to-Speech)
+  //  2. Web Speech API — Instant Barge-In TTS & Push-to-Talk Mic
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function toggleTTS() {
     ttsEnabled = !ttsEnabled;
@@ -1843,24 +1996,44 @@
     } else {
       btn.innerHTML = '🔇 Muted';
       btn.classList.add('bg-slate-700');
-      window.speechSynthesis.cancel();
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
     }
   }
 
-  function speak(text) {
-    if (!ttsEnabled || !window.speechSynthesis) return;
+  function speakVCResponse(text) {
+    if (!ttsEnabled || !window.speechSynthesis || !text) return;
+
+    // Cancel any ongoing speech first
     window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.05;
-    utterance.pitch = 0.95;
-    utterance.volume = 0.9;
+    utterance.rate = 1.06;
+    utterance.pitch = 0.96;
+    utterance.volume = 1.0;
+
+    // Select a natural English voice if available
+    const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+    const englishVoices = voices.filter((v) => /^en(-|_|$)/i.test(v.lang));
+    const preferredVoice =
+      englishVoices.find((v) => /natural|neural|google|samantha|daniel|alex|premium/i.test(v.name)) ||
+      englishVoices[0] ||
+      null;
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
     window.speechSynthesis.speak(utterance);
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Mic (Push-to-Talk via Web Speech API)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Backward-compatible alias
+  const speak = speakVCResponse;
+
   function toggleMic() {
+    // Instant Barge-In: cancel VC speech the moment the user clicks the mic button
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
     const micBtn = document.getElementById('micBtn');
 
     if (isRecording) {
@@ -1871,18 +2044,19 @@
       return;
     }
 
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      appendChat('system', '⚠️ Speech recognition not supported in this browser.', 'error');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      appendChat('system', '⚠️ Speech recognition is not supported in this browser.', 'error');
       return;
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
     recognition.onresult = (event) => {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
       let transcript = '';
       for (const result of event.results) {
         transcript += result[0].transcript;
@@ -1900,7 +2074,7 @@
       isRecording = false;
       micBtn.classList.remove('mic-recording');
       micBtn.innerHTML = '🎙️';
-      if (e.error !== 'no-speech') {
+      if (e.error !== 'no-speech' && e.error !== 'aborted') {
         appendChat('system', `⚠️ Mic error: ${e.error}`, 'error');
       }
     };
@@ -1916,16 +2090,25 @@
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = text ?? '';
     return div.innerHTML;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Init — load default sample deck onto #slideCanvas
+  //  Init — On page load, load fintech deck & fetch /api/skill
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  (function init() {
+  function initializeApp() {
     loadSampleDeck('fintech');
-  })();
+    fetchSkillPreview();
+    if (window.speechSynthesis && window.speechSynthesis.getVoices) {
+      window.speechSynthesis.getVoices();
+    }
+  }
+
+  window.onload = initializeApp;
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initializeApp();
+  }
   </script>
 
 </body>
