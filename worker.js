@@ -66,6 +66,7 @@ function resolveEnvConfig(env = {}, overrides = {}) {
     cleanEnvValue(env.GEMMA_MODEL_ID) || 'gemma-4-26b-a4b-it';
   const gemmaFallbackModels =
     cleanEnvValue(env.GEMMA_FALLBACK_MODELS) ||
+    cleanEnvValue(env.GEMMA_FALLBACK_MODEL) ||
     'gemma-4-26b-a4b-it,gemma-4-31b-it,gemma-3-27b-it';
 
   const ollamaHost =

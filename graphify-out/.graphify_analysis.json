@@ -2,41 +2,13 @@
   "communities": {
     "0": [
       "app",
-      "app_build_interrogation_prompt",
-      "app_build_verdict_prompt",
-      "app_clamp",
-      "app_get_ping",
-      "app_get_state",
-      "app_health_check",
-      "app_interrogate",
-      "app_persist_skill_md",
-      "app_post_ping",
-      "app_post_skill",
       "app_rationale_1",
-      "app_rationale_137",
-      "app_rationale_182",
-      "app_rationale_313",
-      "app_rationale_328",
-      "app_rationale_334",
-      "app_rationale_358",
-      "app_rationale_386",
-      "app_rationale_392",
-      "app_rationale_410",
-      "app_rationale_650",
-      "app_rationale_668",
-      "app_rationale_747",
-      "app_reset_state",
-      "app_verdict",
       "copy",
       "fastapi",
       "fastapi_middleware_cors",
       "fastapi_responses",
       "fastapi_staticfiles",
-      "get",
-      "jsonresponse",
       "pathlib",
-      "post",
-      "uploadfile",
       "uvicorn"
     ],
     "1": [
@@ -85,8 +57,8 @@
       "engine_rationale_146",
       "engine_rationale_184",
       "engine_rationale_313",
-      "engine_rationale_388",
-      "engine_rationale_458",
+      "engine_rationale_389",
+      "engine_rationale_459",
       "engine_rationale_62",
       "engine_rationale_72",
       "readme_1_track_best_use_of_gemma_4_via_gemini_api",
@@ -103,11 +75,11 @@
       "readme",
       "readme_1_clone_the_repository_create_a_virtual_environment",
       "readme_2_install_dependencies",
-      "readme_3_configure_environment_variables_env_or_infisical_secret_sync",
+      "readme_3_configure_environment_variables_env_cloudflare_secrets",
       "readme_4_start_the_fastapi_diligence_server",
       "readme_5_update_the_graphify_repository_knowledge_graph",
       "readme_60_second_judge_verification_guide",
-      "readme_6_cloudflare_workers_edge_deployment_infisical_secret_sync_observability_https_hotseat_ai_ojasdeshpande_in",
+      "readme_6_cloudflare_workers_edge_deployment_observability_https_hotseat_ai_ojasdeshpande_in",
       "readme_author",
       "readme_executive_overview_problem_statement",
       "readme_hotseat_ai",
@@ -207,10 +179,46 @@
     "11": [
       "claude_claude",
       "claude_claude_graphify"
+    ],
+    "12": [
+      "app_persist_skill_md",
+      "app_post_ping",
+      "app_post_skill",
+      "app_rationale_313",
+      "app_rationale_358",
+      "app_rationale_392",
+      "app_rationale_650",
+      "app_reset_state",
+      "post"
+    ],
+    "13": [
+      "app_get_ping",
+      "app_get_state",
+      "app_health_check",
+      "app_rationale_328",
+      "app_rationale_334",
+      "app_rationale_386",
+      "get",
+      "jsonresponse"
+    ],
+    "14": [
+      "app_build_verdict_prompt",
+      "app_clamp",
+      "app_rationale_182",
+      "app_rationale_668",
+      "app_rationale_747",
+      "app_verdict"
+    ],
+    "15": [
+      "app_build_interrogation_prompt",
+      "app_interrogate",
+      "app_rationale_137",
+      "app_rationale_410",
+      "uploadfile"
     ]
   },
   "cohesion": {
-    "0": 0.08408408408408409,
+    "0": 0.2222222222222222,
     "1": 0.2037037037037037,
     "2": 0.16996047430830039,
     "3": 0.1,
@@ -221,7 +229,11 @@
     "8": 0.25,
     "9": 0.5,
     "10": 1.0,
-    "11": 1.0
+    "11": 1.0,
+    "12": 0.25,
+    "13": 0.32142857142857145,
+    "14": 0.3333333333333333,
+    "15": 0.4
   },
   "gods": [
     {
@@ -242,6 +254,11 @@
     {
       "id": "app_interrogate",
       "label": "interrogate()",
+      "degree": 9
+    },
+    {
+      "id": "engine_clean_env",
+      "label": "_clean_env()",
       "degree": 9
     },
     {
@@ -268,14 +285,20 @@
       "id": "static_js_app_sendfounderreply",
       "label": "sendFounderReply()",
       "degree": 8
-    },
-    {
-      "id": "static_js_app_testallconnections",
-      "label": "testAllConnections()",
-      "degree": 8
     }
   ],
   "surprises": [
+    {
+      "source": "6. Cloudflare Workers Edge Deployment & Observability (`https://hotseat-ai.ojasdeshpande.in/`)",
+      "target": "resolveEnvConfig()",
+      "source_files": [
+        "README.md",
+        "worker.js"
+      ],
+      "confidence": "INFERRED",
+      "relation": "references",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities; peripheral node `6. Cloudflare Workers Edge Deployment & Observability (`https://hotseat-ai.ojasdeshpande.in/`)` unexpectedly reaches hub `resolveEnvConfig()`"
+    },
     {
       "source": "1. Track: Best Use of Gemma 4 (via Gemini API)",
       "target": "Gemma4Router",
@@ -310,17 +333,6 @@
       "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
     },
     {
-      "source": "3. Compulsory Sponsor Integration — Graphify Knowledge Graph",
-      "target": "interrogate()",
-      "source_files": [
-        "README.md",
-        "app.py"
-      ],
-      "confidence": "INFERRED",
-      "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
-    },
-    {
       "source": "Hackathon Track & Sponsor Compliance Disclosures",
       "target": "_persist_skill_md()",
       "source_files": [
@@ -335,8 +347,8 @@
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `Gemma4Router` connect `Gemma4Router` to `engine.py`, `.claude/CLAUDE.md`, `HotSeat AI`?",
-      "why": "High betweenness centrality (0.123) - this node is a cross-community bridge."
+      "question": "Why does `Gemma4Router` connect `Gemma4Router` to `app.py`, `.claude/CLAUDE.md`, `HotSeat AI`?",
+      "why": "High betweenness centrality (0.106) - this node is a cross-community bridge."
     },
     {
       "type": "verify_inferred",
@@ -350,23 +362,23 @@
     },
     {
       "type": "low_cohesion",
-      "question": "Should `engine.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.08408408408408409 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `HotSeat AI` connect `app.js` to `.claude/CLAUDE.md`, `Gemma4Router`?",
-      "why": "High betweenness centrality (0.122) - this node is a cross-community bridge."
-    },
-    {
-      "type": "low_cohesion",
       "question": "Should `app.js` be split into smaller, more focused modules?",
       "why": "Cohesion score 0.1 - nodes in this community are weakly interconnected."
     },
     {
       "type": "bridge_node",
+      "question": "Why does `HotSeat AI` connect `app.js` to `.claude/CLAUDE.md`, `Gemma4Router`?",
+      "why": "High betweenness centrality (0.095) - this node is a cross-community bridge."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `voice.js` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "bridge_node",
       "question": "Why does `Architectural Component Breakdown` connect `.claude/CLAUDE.md` to `Gemma4Router`, `decks.js`?",
-      "why": "High betweenness centrality (0.118) - this node is a cross-community bridge."
+      "why": "High betweenness centrality (0.089) - this node is a cross-community bridge."
     }
   ]
 }

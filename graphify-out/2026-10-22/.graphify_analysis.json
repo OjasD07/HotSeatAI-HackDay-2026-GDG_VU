@@ -250,18 +250,13 @@
       "degree": 9
     },
     {
-      "id": "readme_hotseat_ai",
-      "label": "HotSeat AI",
+      "id": "static_js_app_appendchat",
+      "label": "appendChat()",
       "degree": 8
     },
     {
-      "id": "engine_clean_env",
-      "label": "_clean_env()",
-      "degree": 8
-    },
-    {
-      "id": "static_js_app_testallconnections",
-      "label": "testAllConnections()",
+      "id": "static_js_app_generateverdict",
+      "label": "generateVerdict()",
       "degree": 8
     },
     {
@@ -273,31 +268,14 @@
       "id": "static_js_app_sendfounderreply",
       "label": "sendFounderReply()",
       "degree": 8
+    },
+    {
+      "id": "static_js_app_testallconnections",
+      "label": "testAllConnections()",
+      "degree": 8
     }
   ],
   "surprises": [
-    {
-      "source": "Architectural Component Breakdown",
-      "target": "Gemma4Router",
-      "source_files": [
-        "README.md",
-        "engine.py"
-      ],
-      "confidence": "INFERRED",
-      "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); bridges separate communities"
-    },
-    {
-      "source": "Architectural Component Breakdown",
-      "target": "callGeminiCascade()",
-      "source_files": [
-        "README.md",
-        "worker.js"
-      ],
-      "confidence": "INFERRED",
-      "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); bridges separate communities"
-    },
     {
       "source": "1. Track: Best Use of Gemma 4 (via Gemini API)",
       "target": "Gemma4Router",
@@ -307,7 +285,7 @@
       ],
       "confidence": "INFERRED",
       "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); peripheral node `1. Track: Best Use of Gemma 4 (via Gemini API)` unexpectedly reaches hub `Gemma4Router`"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); peripheral node `1. Track: Best Use of Gemma 4 (via Gemini API)` unexpectedly reaches hub `Gemma4Router`"
     },
     {
       "source": "2. Track: Open-Source / Open-Weight AI & Agent Skills",
@@ -318,10 +296,21 @@
       ],
       "confidence": "INFERRED",
       "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); peripheral node `2. Track: Open-Source / Open-Weight AI & Agent Skills` unexpectedly reaches hub `Gemma4Router`"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); peripheral node `2. Track: Open-Source / Open-Weight AI & Agent Skills` unexpectedly reaches hub `Gemma4Router`"
     },
     {
-      "source": "3. Compulsory Sponsor Integration \u2014 Graphify Knowledge Graph",
+      "source": "Architectural Component Breakdown",
+      "target": "Gemma4Router",
+      "source_files": [
+        "README.md",
+        "engine.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "references",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
+    },
+    {
+      "source": "3. Compulsory Sponsor Integration — Graphify Knowledge Graph",
       "target": "interrogate()",
       "source_files": [
         "README.md",
@@ -329,11 +318,55 @@
       ],
       "confidence": "INFERRED",
       "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); bridges separate communities"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
+    },
+    {
+      "source": "Hackathon Track & Sponsor Compliance Disclosures",
+      "target": "_persist_skill_md()",
+      "source_files": [
+        "README.md",
+        "app.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "references",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
     }
   ],
-  "tokens": {
-    "input": 0,
-    "output": 0
-  }
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `Gemma4Router` connect `Gemma4Router` to `engine.py`, `.claude/CLAUDE.md`, `HotSeat AI`?",
+      "why": "High betweenness centrality (0.123) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 4 inferred relationships involving `Gemma4Router` (e.g. with `1. Track: Best Use of Gemma 4 (via Gemini API)` and `2. Track: Open-Source / Open-Weight AI & Agent Skills`) actually correct?",
+      "why": "`Gemma4Router` has 4 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `wrangler` to the rest of the system?",
+      "why": "1 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `engine.py` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08408408408408409 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `HotSeat AI` connect `app.js` to `.claude/CLAUDE.md`, `Gemma4Router`?",
+      "why": "High betweenness centrality (0.122) - this node is a cross-community bridge."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `app.js` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.1 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `Architectural Component Breakdown` connect `.claude/CLAUDE.md` to `Gemma4Router`, `decks.js`?",
+      "why": "High betweenness centrality (0.118) - this node is a cross-community bridge."
+    }
+  ]
 }

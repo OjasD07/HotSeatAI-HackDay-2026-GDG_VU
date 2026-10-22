@@ -1,1 +1,13 @@
-{"0": "engine.py", "1": "app.py", "2": "Gemma4Router", "3": "app.js", "4": "decks.js", "5": "voice.js", "6": "HotSeat AI", "7": "CLAUDE.md", "8": ".claude/CLAUDE.md", "9": "worker.js", "10": "package.json", "12": "_compile_skill_md"}
+{
+  "1": "app.py",
+  "2": "Gemma4Router",
+  "3": "app.js",
+  "4": "decks.js",
+  "5": "voice.js",
+  "6": "HotSeat AI",
+  "7": "CLAUDE.md",
+  "8": ".claude/CLAUDE.md",
+  "9": "worker.js",
+  "10": "package.json",
+  "11": ".claude/CLAUDE.md"
+}

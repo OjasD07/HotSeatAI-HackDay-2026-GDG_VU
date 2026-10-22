@@ -322,9 +322,10 @@ class Gemma4Router:
         contents.append(prompt)
 
         env_primary = _clean_env("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it")
-        env_fallbacks = _clean_env(
-            "GEMMA_FALLBACK_MODELS",
-            "gemma-4-26b-a4b-it,gemma-4-31b-it,gemma-3-27b-it",
+        env_fallbacks = (
+            _clean_env("GEMMA_FALLBACK_MODELS", "")
+            or _clean_env("GEMMA_FALLBACK_MODEL", "")
+            or "gemma-4-26b-a4b-it,gemma-4-31b-it,gemma-3-27b-it"
         )
 
         cascade: list[str] = []
