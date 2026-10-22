@@ -6,14 +6,14 @@ description: >
 license: Apache-2.0
 metadata:
   engine: Gemma 4 Multimodal Harness
-  detected_industry: "Enterprise SaaS"
-  business_model: "Subscription-based (SaaS)"
-  conviction_score: "45/100"
+  detected_industry: "Fintech (Cross-Border B2B Treasury & Payments)"
+  business_model: "API-driven B2B treasury infrastructure utilizing an open-source distribution model with a zero-fee transaction structure."
+  conviction_score: "50/100"
 ---
 
-# Institutional Pitch-Defense Skill — Enterprise SaaS
+# Institutional Pitch-Defense Skill — Fintech (Cross-Border B2B Treasury & Payments)
 
-> **Active IC Conviction Index: 45/100** | **Model: Subscription-based (SaaS)**
+> **Active IC Conviction Index: 50/100** | **Model: API-driven B2B treasury infrastructure utilizing an open-source distribution model with a zero-fee transaction structure.**
 
 ## 1. Material Cross-Slide Contradictions & Audit Flags
 
@@ -21,8 +21,7 @@ _No material cross-slide contradictions logged in the active diligence session._
 
 ## 2. Synthesized Institutional Diligence Guardrails (Gemma 4 Live Loop)
 
-1. Verify alignment between high-level enterprise value propositions and specific technical moats during the initial pitch phase.
-2. Monitor for 'metric-pivoting' where founders bypass fundamental product-market fit questions in favor of presenting high-level growth figures.
+1. Audit 'zero-fee' transaction models to identify the specific revenue driver (e.g., FX spreads, float, or SaaS fees) and validate the sustainability of high NRR in the absence of transaction fees.
 
 ## 3. Pre-Committee Verification Protocol
 
@@ -30,5 +29,4 @@ _No material cross-slide contradictions logged in the active diligence session._
 - [ ] Cross-audit customer acquisition cost (CAC), payback period, and gross margin across marketing and financial slides.
 - [ ] Verify that headcount, R&D milestones, and capital deployment schedules align with stated burn rate and runway.
 - [ ] Confirm that channel partner, distributor, or payment processing fees are reflected in net contribution margins.
-- [ ] [Session Rule] Verify alignment between high-level enterprise value propositions and specific technical moats during the initial pitch phase.
-- [ ] [Session Rule] Monitor for 'metric-pivoting' where founders bypass fundamental product-market fit questions in favor of presenting high-level growth figures.
+- [ ] [Session Rule] Audit 'zero-fee' transaction models to identify the specific revenue driver (e.g., FX spreads, float, or SaaS fees) and validate the sustainability of high NRR in the absence of transaction fees.

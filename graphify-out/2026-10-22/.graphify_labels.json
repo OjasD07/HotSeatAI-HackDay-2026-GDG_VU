@@ -1,10 +1,6 @@
 {
-  "0": "engine.py",
-  "1": "interrogate",
   "2": "Gemma4Router",
-  "3": "app.py",
-  "5": "get_skill",
+  "6": "HotSeat AI",
   "7": "CLAUDE.md",
-  "8": ".claude/CLAUDE.md",
-  "9": "JSONResponse"
+  "8": ".claude/CLAUDE.md"
 }
