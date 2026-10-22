@@ -6,14 +6,14 @@ description: >
 license: Apache-2.0
 metadata:
   engine: Gemma 4 Multimodal Harness
-  detected_industry: "—"
-  business_model: "—"
-  conviction_score: "50/100"
+  detected_industry: "Enterprise SaaS"
+  business_model: "Subscription-based (SaaS)"
+  conviction_score: "45/100"
 ---
 
-# Institutional Pitch-Defense Skill — —
+# Institutional Pitch-Defense Skill — Enterprise SaaS
 
-> **Active IC Conviction Index: 50/100** | **Model: —**
+> **Active IC Conviction Index: 45/100** | **Model: Subscription-based (SaaS)**
 
 ## 1. Material Cross-Slide Contradictions & Audit Flags
 
@@ -21,7 +21,8 @@ _No material cross-slide contradictions logged in the active diligence session._
 
 ## 2. Synthesized Institutional Diligence Guardrails (Gemma 4 Live Loop)
 
-_No session guardrails synthesized yet. Submit a slide or founder defense to compile live rules._
+1. Verify alignment between high-level enterprise value propositions and specific technical moats during the initial pitch phase.
+2. Monitor for 'metric-pivoting' where founders bypass fundamental product-market fit questions in favor of presenting high-level growth figures.
 
 ## 3. Pre-Committee Verification Protocol
 
@@ -29,3 +30,5 @@ _No session guardrails synthesized yet. Submit a slide or founder defense to com
 - [ ] Cross-audit customer acquisition cost (CAC), payback period, and gross margin across marketing and financial slides.
 - [ ] Verify that headcount, R&D milestones, and capital deployment schedules align with stated burn rate and runway.
 - [ ] Confirm that channel partner, distributor, or payment processing fees are reflected in net contribution margins.
+- [ ] [Session Rule] Verify alignment between high-level enterprise value propositions and specific technical moats during the initial pitch phase.
+- [ ] [Session Rule] Monitor for 'metric-pivoting' where founders bypass fundamental product-market fit questions in favor of presenting high-level growth figures.

@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   ".claude/skills/pitch-defense/SKILL.md": {
-    "mtime": 1792667038.0171106,
-    "seen": 1792667464.784877,
-    "ast_hash": "c5d25362d15fcadf8b773de8d1f368b5",
+    "mtime": 1792668161.7118497,
+    "seen": 1792668397.776567,
+    "ast_hash": "d4f5b724139185a75cf368775f18c38c",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1792659393.9728615,
-    "seen": 1792661673.057795,
-    "ast_hash": "4569b6428cb64fc88043715ce10acb5d",
+    "mtime": 1792668334.2851527,
+    "seen": 1792668397.7765691,
+    "ast_hash": "7b3d99a138752ae2ee807431055018fb",
     "semantic_hash": ""
   },
   "render.yaml": {
@@ -54,9 +54,9 @@
     "semantic_hash": ""
   },
   "static/index.html": {
-    "mtime": 1792667385.2253177,
-    "seen": 1792667464.7848809,
-    "ast_hash": "1811a15b67f2bfbf756a79fba55ce4a3",
+    "mtime": 1792668386.611617,
+    "seen": 1792668397.7765708,
+    "ast_hash": "d085fb2aa40c2375772456c3877c5036",
     "semantic_hash": ""
   }
 }
