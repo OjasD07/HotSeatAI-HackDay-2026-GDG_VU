@@ -6,13 +6,14 @@
       "engine",
       "engine_extract_json_safely",
       "engine_rationale_1",
-      "engine_rationale_56",
+      "engine_rationale_58",
       "google",
       "google_genai",
       "json",
       "logging",
       "os",
       "re",
+      "time",
       "typing",
       "urllib_error",
       "urllib_request"
@@ -20,15 +21,14 @@
     "1": [
       "app_build_interrogation_prompt",
       "app_interrogate",
+      "app_persist_skill_md",
       "app_post_skill",
-      "app_rationale_149",
-      "app_rationale_219",
-      "app_rationale_236",
-      "app_rationale_533",
-      "app_rationale_620",
+      "app_rationale_137",
+      "app_rationale_313",
+      "app_rationale_340",
+      "app_rationale_358",
+      "app_rationale_598",
       "app_reset_state",
-      "app_verdict",
-      "jsonresponse",
       "post",
       "uploadfile"
     ],
@@ -39,18 +39,20 @@
       "engine_gemma4router_generate",
       "engine_gemma4router_init",
       "engine_gemma4router_ollama",
-      "engine_rationale_106",
-      "engine_rationale_140",
-      "engine_rationale_207",
-      "engine_rationale_307"
+      "engine_rationale_108",
+      "engine_rationale_132",
+      "engine_rationale_175",
+      "engine_rationale_249"
     ],
     "3": [
       "app",
       "app_build_verdict_prompt",
       "app_clamp",
       "app_rationale_1",
-      "app_rationale_554",
-      "app_rationale_694",
+      "app_rationale_182",
+      "app_rationale_616",
+      "app_rationale_695",
+      "app_verdict",
       "copy",
       "fastapi",
       "fastapi_middleware_cors",
@@ -74,19 +76,16 @@
     "5": [
       "app_compile_skill_md",
       "app_get_skill",
-      "app_get_state",
-      "app_rationale_213",
-      "app_rationale_442",
-      "app_rationale_526",
-      "get",
+      "app_rationale_239",
+      "app_rationale_591",
       "plaintextresponse"
     ],
     "6": [
       "claude_skills_pitch_defense_skill",
-      "claude_skills_pitch_defense_skill_1_discovered_cross_slide_contradictions_red_flags",
-      "claude_skills_pitch_defense_skill_2_learned_domain_unit_economics_guardrails_hermes_self_improving_loop",
-      "claude_skills_pitch_defense_skill_3_mandatory_pre_pitch_verification_checklist",
-      "claude_skills_pitch_defense_skill_hotseat_pitch_defense_skill_detecting_from_pitch"
+      "claude_skills_pitch_defense_skill_1_material_cross_slide_contradictions_audit_flags",
+      "claude_skills_pitch_defense_skill_2_synthesized_institutional_diligence_guardrails_gemma_4_live_loop",
+      "claude_skills_pitch_defense_skill_3_pre_committee_verification_protocol",
+      "claude_skills_pitch_defense_skill_institutional_pitch_defense_skill"
     ],
     "7": [
       "claude",
@@ -95,34 +94,53 @@
     "8": [
       "claude_claude",
       "claude_claude_graphify"
+    ],
+    "9": [
+      "app_get_state",
+      "app_health_check",
+      "app_rationale_328",
+      "app_rationale_334",
+      "get",
+      "jsonresponse"
     ]
   },
   "cohesion": {
-    "0": 0.1523809523809524,
-    "1": 0.19230769230769232,
+    "0": 0.14166666666666666,
+    "1": 0.19696969696969696,
     "2": 0.3111111111111111,
-    "3": 0.15384615384615385,
+    "3": 0.1523809523809524,
     "4": 0.2,
-    "5": 0.25,
+    "5": 0.4,
     "6": 0.4,
     "7": 1.0,
-    "8": 1.0
+    "8": 1.0,
+    "9": 0.4
   },
   "gods": [
+    {
+      "id": "engine_extract_json_safely",
+      "label": "extract_json_safely()",
+      "degree": 8
+    },
+    {
+      "id": "app_interrogate",
+      "label": "interrogate()",
+      "degree": 8
+    },
     {
       "id": "engine_gemma4router",
       "label": "Gemma4Router",
       "degree": 7
     },
     {
-      "id": "engine_extract_json_safely",
-      "label": "extract_json_safely()",
-      "degree": 7
+      "id": "app_persist_skill_md",
+      "label": "_persist_skill_md()",
+      "degree": 6
     },
     {
-      "id": "app_interrogate",
-      "label": "interrogate()",
-      "degree": 7
+      "id": "app_verdict",
+      "label": "verdict()",
+      "degree": 6
     },
     {
       "id": "app_post_skill",
@@ -130,8 +148,8 @@
       "degree": 5
     },
     {
-      "id": "app_verdict",
-      "label": "verdict()",
+      "id": "app_reset_state",
+      "label": "reset_state()",
       "degree": 5
     },
     {
@@ -148,16 +166,6 @@
       "id": "readme_quickstart",
       "label": "🚀 Quickstart",
       "degree": 5
-    },
-    {
-      "id": "app_reset_state",
-      "label": "reset_state()",
-      "degree": 4
-    },
-    {
-      "id": "app_compile_skill_md",
-      "label": "_compile_skill_md()",
-      "degree": 4
     }
   ],
   "surprises": [
@@ -177,12 +185,17 @@
     {
       "type": "bridge_node",
       "question": "Why does `extract_json_safely()` connect `engine.py` to `Gemma4Router`, `🦈 HotSeat AI — Universal VC Pitch Interrogator & Cross-Slide Contradiction Engine`?",
-      "why": "High betweenness centrality (0.230) - this node is a cross-community bridge."
+      "why": "High betweenness centrality (0.227) - this node is a cross-community bridge."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `engine.py` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.14166666666666666 - nodes in this community are weakly interconnected."
     },
     {
       "type": "bridge_node",
       "question": "Why does `✨ Key Capabilities` connect `🦈 HotSeat AI — Universal VC Pitch Interrogator & Cross-Slide Contradiction Engine` to `engine.py`?",
-      "why": "High betweenness centrality (0.181) - this node is a cross-community bridge."
+      "why": "High betweenness centrality (0.173) - this node is a cross-community bridge."
     }
   ]
 }

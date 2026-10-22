@@ -6,26 +6,26 @@ description: >
 license: Apache-2.0
 metadata:
   engine: Gemma 4 Multimodal Harness
-  detected_industry: "Detecting from pitch..."
+  detected_industry: "—"
+  business_model: "—"
   conviction_score: "50/100"
 ---
 
-# HotSeat Pitch-Defense Skill  —  Detecting from pitch...
+# Institutional Pitch-Defense Skill — —
 
-> **Conviction score after interrogation: 50/100**
+> **Active IC Conviction Index: 50/100** | **Model: —**
 
-## 1. Discovered Cross-Slide Contradictions & Red Flags
+## 1. Material Cross-Slide Contradictions & Audit Flags
 
-_No contradictions detected yet. Upload more slides and defend your claims._
+_No material cross-slide contradictions logged in the active diligence session._
 
-## 2. Learned Domain & Unit-Economics Guardrails (Hermes Self-Improving Loop)
+## 2. Synthesized Institutional Diligence Guardrails (Gemma 4 Live Loop)
 
-_No guardrails learned yet. Complete at least one interrogation turn._
+_No session guardrails synthesized yet. Submit a slide or founder defense to compile live rules._
 
-## 3. Mandatory Pre-Pitch Verification Checklist
+## 3. Pre-Committee Verification Protocol
 
-- [ ] Verify all TAM/SAM/SOM figures are internally consistent across slides.
-- [ ] Confirm unit economics (CAC, LTV, gross margin) match the revenue model slide.
-- [ ] Ensure timeline milestones do not contradict fundraising or hiring slides.
-- [ ] Check that competitive landscape claims align with the stated moat/defensibility.
-- [ ] Validate that financial projections use assumptions disclosed elsewhere in the deck.
+- [ ] Reconcile top-down TAM/SAM/SOM figures against bottom-up customer count and pricing assumptions.
+- [ ] Cross-audit customer acquisition cost (CAC), payback period, and gross margin across marketing and financial slides.
+- [ ] Verify that headcount, R&D milestones, and capital deployment schedules align with stated burn rate and runway.
+- [ ] Confirm that channel partner, distributor, or payment processing fees are reflected in net contribution margins.
