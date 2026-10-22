@@ -23,11 +23,11 @@
       "app_interrogate",
       "app_persist_skill_md",
       "app_post_skill",
-      "app_rationale_148",
-      "app_rationale_332",
-      "app_rationale_359",
-      "app_rationale_377",
-      "app_rationale_579",
+      "app_rationale_137",
+      "app_rationale_313",
+      "app_rationale_340",
+      "app_rationale_358",
+      "app_rationale_598",
       "app_reset_state",
       "post",
       "uploadfile"
@@ -49,9 +49,9 @@
       "app_build_verdict_prompt",
       "app_clamp",
       "app_rationale_1",
-      "app_rationale_202",
-      "app_rationale_597",
-      "app_rationale_674",
+      "app_rationale_182",
+      "app_rationale_616",
+      "app_rationale_695",
       "app_verdict",
       "copy",
       "fastapi",
@@ -76,8 +76,8 @@
     "5": [
       "app_compile_skill_md",
       "app_get_skill",
-      "app_rationale_258",
-      "app_rationale_572",
+      "app_rationale_239",
+      "app_rationale_591",
       "plaintextresponse"
     ],
     "6": [
@@ -85,7 +85,7 @@
       "claude_skills_pitch_defense_skill_1_material_cross_slide_contradictions_audit_flags",
       "claude_skills_pitch_defense_skill_2_synthesized_institutional_diligence_guardrails_gemma_4_live_loop",
       "claude_skills_pitch_defense_skill_3_pre_committee_verification_protocol",
-      "claude_skills_pitch_defense_skill_institutional_pitch_defense_skill_awaiting_deck_artifact"
+      "claude_skills_pitch_defense_skill_institutional_pitch_defense_skill"
     ],
     "7": [
       "claude",
@@ -98,8 +98,8 @@
     "9": [
       "app_get_state",
       "app_health_check",
-      "app_rationale_347",
-      "app_rationale_353",
+      "app_rationale_328",
+      "app_rationale_334",
       "get",
       "jsonresponse"
     ]

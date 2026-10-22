@@ -329,6 +329,58 @@ async def health_check() -> JSONResponse:
     return JSONResponse(content={"status": "ok", "engine": "gemma-4-multimodal"})
 
 
+@app.get("/api/ping")
+async def get_ping(provider: str = "all") -> JSONResponse:
+    """Probe connectivity and round-trip latency for Gemini API, Ollama, and LM Studio."""
+    if provider == "all":
+        gemini_status = await router.ping_provider("gemini_api")
+        ollama_status = await router.ping_provider("ollama")
+        lmstudio_status = await router.ping_provider("lmstudio")
+        return JSONResponse(
+            content={
+                "providers": {
+                    "gemini_api": gemini_status,
+                    "ollama": ollama_status,
+                    "lmstudio": lmstudio_status,
+                }
+            }
+        )
+    single = await router.ping_provider(provider)
+    return JSONResponse(content=single)
+
+
+@app.post("/api/ping")
+async def post_ping(
+    provider: str = Form("all"),
+    api_key: str = Form(""),
+    ollama_model: str = Form(""),
+) -> JSONResponse:
+    """Probe connectivity and latency with optional runtime overrides from the UI."""
+    key_override = api_key if api_key else None
+    model_override = ollama_model if ollama_model else None
+
+    if provider == "all":
+        gemini_status = await router.ping_provider("gemini_api", api_key_override=key_override)
+        ollama_status = await router.ping_provider("ollama", model_override=model_override)
+        lmstudio_status = await router.ping_provider("lmstudio", model_override=model_override)
+        return JSONResponse(
+            content={
+                "providers": {
+                    "gemini_api": gemini_status,
+                    "ollama": ollama_status,
+                    "lmstudio": lmstudio_status,
+                }
+            }
+        )
+
+    single = await router.ping_provider(
+        provider,
+        api_key_override=key_override,
+        model_override=model_override,
+    )
+    return JSONResponse(content=single)
+
+
 @app.get("/api/state")
 async def get_state() -> JSONResponse:
     """Return the current session state snapshot."""

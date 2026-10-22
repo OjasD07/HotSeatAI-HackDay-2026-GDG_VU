@@ -1,12 +1,12 @@
 """
-HotSeat AI — Gemma 4 Multimodal Inference Engine & JSON Extractor
-=================================================================
+HotSeat AI — Gemma 4 Multimodal Inference Engine & Connection Diagnostics
+=========================================================================
 
-Provides:
-  • Gemma4Router        – live Gemma 4 multimodal inference via Google GenAI SDK
-                          ("gemma-4-26b-a4b-it" → "gemma-4-31b-it") + local Ollama
-  • extract_json_safely – 3-layer JSON extractor (strips <thought> blocks & fences)
-                          with zero hardcoded fake responses
+Supported Providers (Strictly Isolated — No Silent Cross-Provider Fallbacks)
+----------------------------------------------------------------------------
+  • "gemini_api" – Google GenAI SDK ("gemma-4-26b-a4b-it" → "gemma-4-31b-it")
+  • "ollama"     – Local Ollama REST API (http://127.0.0.1:11434/api/chat)
+  • "lmstudio"   – Local LM Studio OpenAI-compatible API (http://127.0.0.1:1234/v1/chat/completions)
 
 Multimodal ordering rule
 ------------------------
@@ -46,16 +46,22 @@ _CLOUD_CASCADE: list[str] = [
 ]
 
 _DEFAULT_TEMPERATURE: float = 0.3
+
 _DEFAULT_OLLAMA_URL: str = "http://127.0.0.1:11434/api/chat"
+_DEFAULT_OLLAMA_TAGS_URL: str = "http://127.0.0.1:11434/api/tags"
 _DEFAULT_OLLAMA_MODEL: str = "gemma4:12b"
 _DEFAULT_OLLAMA_KEEP_ALIVE: str = "30m"
+
+_DEFAULT_LMSTUDIO_URL: str = "http://127.0.0.1:1234/v1/chat/completions"
+_DEFAULT_LMSTUDIO_MODELS_URL: str = "http://127.0.0.1:1234/v1/models"
+_DEFAULT_LMSTUDIO_MODEL: str = "gemma-4-12b-it"
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  3-Layer JSON Extractor (Zero Canned Fallbacks)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def extract_json_safely(raw_text: str) -> dict[str, Any]:
-    """Parse a JSON object from Gemma 4 output using a 3-layer cleaning pipeline.
+    """Parse a JSON object from model output using a 3-layer cleaning pipeline.
 
     Layer 1 – Strip ``<thought>…</thought>`` reasoning blocks.
     Layer 2 – Strip markdown code fences (````json`` / `````).
@@ -65,7 +71,7 @@ def extract_json_safely(raw_text: str) -> dict[str, Any]:
     object. Never returns hardcoded or pre-written fake responses.
     """
     if not raw_text or not raw_text.strip():
-        raise ValueError("Gemma 4 returned an empty response.")
+        raise ValueError("Model returned an empty response.")
 
     # Layer 1: strip <thought>…</thought> reasoning blocks
     cleaned = re.sub(r"<thought>.*?</thought>", "", raw_text, flags=re.DOTALL)
@@ -78,7 +84,7 @@ def extract_json_safely(raw_text: str) -> dict[str, Any]:
     last_brace = cleaned.rfind("}")
     if first_brace == -1 or last_brace == -1 or last_brace <= first_brace:
         raise ValueError(
-            f"Gemma 4 response did not contain a JSON object. Raw output: {cleaned[:300]}"
+            f"Model response did not contain a JSON object. Raw output: {cleaned[:300]}"
         )
 
     candidate = cleaned[first_brace : last_brace + 1]
@@ -88,7 +94,6 @@ def extract_json_safely(raw_text: str) -> dict[str, Any]:
             raise ValueError("Parsed JSON root is not an object.")
         return parsed
     except json.JSONDecodeError:
-        # Attempt lightweight trailing-comma cleanup before raising
         repaired = re.sub(r",\s*([}\]])", r"\1", candidate)
         try:
             parsed = json.loads(repaired)
@@ -96,29 +101,33 @@ def extract_json_safely(raw_text: str) -> dict[str, Any]:
                 return parsed
         except json.JSONDecodeError as exc:
             logger.error("JSON decode failed after cleaning: %s | raw=%s", exc, candidate[:400])
-            raise ValueError(f"Failed to parse JSON from Gemma 4 output: {exc}") from exc
+            raise ValueError(f"Failed to parse JSON from model output: {exc}") from exc
 
-    raise ValueError("Failed to parse JSON object from Gemma 4 output.")
+    raise ValueError("Failed to parse JSON object from model output.")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  Gemma 4 Dual-Engine Multimodal Router
+#  Gemma 4 Multi-Provider Router (Gemini API, Ollama, LM Studio)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 class Gemma4Router:
     """Route multimodal and text diligence prompts to live Gemma 4 endpoints.
 
-    Supported providers
-    -------------------
-    ``"gemini_api"``
-        Cloud-hosted Gemma 4 models via the Google GenAI SDK.
-        Defaults to ``gemma-4-26b-a4b-it`` and cascades to ``gemma-4-31b-it``.
-
-    ``"ollama"``
-        Locally-hosted open-weight Gemma 4 model via the Ollama REST API.
+    Each provider is strictly isolated:
+      • ``"gemini_api"`` → Google Gemini API (Gemma 4 cloud cascade)
+      • ``"ollama"``     → Local Ollama server ONLY (never falls back to Gemini API)
+      • ``"lmstudio"``   → Local LM Studio server ONLY (never falls back to Gemini API)
     """
 
     def __init__(self, api_key: Optional[str] = None) -> None:
         self._api_key: Optional[str] = api_key or os.environ.get("GEMINI_API_KEY")
+
+    def _resolve_api_key(self, api_key_override: Optional[str] = None) -> str:
+        load_dotenv(override=True)
+        return (
+            api_key_override.strip()
+            if api_key_override and api_key_override.strip()
+            else (os.environ.get("GEMINI_API_KEY") or self._api_key or "").strip()
+        )
 
     async def generate(
         self,
@@ -129,19 +138,8 @@ class Gemma4Router:
         api_key_override: Optional[str] = None,
         ollama_model_override: Optional[str] = None,
     ) -> dict[str, Any]:
-        """Run live inference against Gemma 4 and return the parsed JSON dict.
-
-        Reads the API key from ``api_key_override`` first, then
-        ``os.environ.get("GEMINI_API_KEY")``. Raises a ``RuntimeError`` if
-        no key is found when using ``gemini_api`` or if inference fails.
-        """
-        load_dotenv(override=True)
-
-        active_api_key = (
-            api_key_override.strip()
-            if api_key_override and api_key_override.strip()
-            else (os.environ.get("GEMINI_API_KEY") or self._api_key or "").strip()
-        )
+        """Run live inference against the selected provider and return parsed JSON."""
+        active_api_key = self._resolve_api_key(api_key_override)
 
         if provider == "gemini_api":
             if not active_api_key:
@@ -158,11 +156,145 @@ class Gemma4Router:
                 prompt=prompt,
                 image_bytes=image_bytes,
                 mime_type=mime_type,
-                active_api_key=active_api_key,
                 ollama_model_override=ollama_model_override,
             )
 
+        if provider == "lmstudio":
+            return await self._lmstudio(
+                prompt=prompt,
+                image_bytes=image_bytes,
+                mime_type=mime_type,
+                model_override=ollama_model_override,
+            )
+
         raise ValueError(f"Unsupported inference provider: '{provider}'")
+
+    # ── Provider Connection & Latency Probe ─────────────────────────────────
+    async def ping_provider(
+        self,
+        provider: str,
+        api_key_override: Optional[str] = None,
+        model_override: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Test connectivity and measure exact round-trip latency (ms) for a provider."""
+        if provider == "gemini_api":
+            active_api_key = self._resolve_api_key(api_key_override)
+            if not active_api_key:
+                return {
+                    "provider": "gemini_api",
+                    "ok": False,
+                    "model_id": os.environ.get("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it"),
+                    "latency_ms": None,
+                    "error": "GEMINI_API_KEY is missing in .env and no override key was provided.",
+                }
+            model_id = os.environ.get("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it").strip() or "gemma-4-26b-a4b-it"
+            try:
+                client = genai.Client(api_key=active_api_key)
+                start_t = time.time()
+                response = client.models.generate_content(
+                    model=model_id,
+                    contents='Respond only with {"ok": true}',
+                    config=types.GenerateContentConfig(
+                        temperature=0.0,
+                        max_output_tokens=16,
+                    ),
+                )
+                latency_ms = int((time.time() - start_t) * 1000)
+                _ = response.text
+                return {
+                    "provider": "gemini_api",
+                    "ok": True,
+                    "model_id": model_id,
+                    "latency_ms": latency_ms,
+                    "error": None,
+                }
+            except Exception as exc:
+                return {
+                    "provider": "gemini_api",
+                    "ok": False,
+                    "model_id": model_id,
+                    "latency_ms": None,
+                    "error": f"Gemini API connection error: {exc}",
+                }
+
+        if provider == "ollama":
+            ollama_url = os.environ.get("OLLAMA_URL", _DEFAULT_OLLAMA_URL)
+            base_host = ollama_url.split("/api/")[0] if "/api/" in ollama_url else "http://127.0.0.1:11434"
+            tags_url = f"{base_host}/api/tags"
+            ollama_model = (
+                model_override.strip()
+                if model_override and model_override.strip()
+                else os.environ.get("OLLAMA_MODEL", _DEFAULT_OLLAMA_MODEL)
+            )
+            try:
+                start_t = time.time()
+                req = urllib.request.Request(tags_url, method="GET")
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                latency_ms = int((time.time() - start_t) * 1000)
+                models = [m.get("name", "") for m in data.get("models", []) if isinstance(m, dict)]
+                return {
+                    "provider": "ollama",
+                    "ok": True,
+                    "model_id": ollama_model,
+                    "available_models": models,
+                    "endpoint": ollama_url,
+                    "latency_ms": latency_ms,
+                    "error": None,
+                }
+            except Exception as exc:
+                return {
+                    "provider": "ollama",
+                    "ok": False,
+                    "model_id": ollama_model,
+                    "endpoint": ollama_url,
+                    "latency_ms": None,
+                    "error": f"Ollama unreachable at {ollama_url}: {exc}",
+                }
+
+        if provider == "lmstudio":
+            lmstudio_url = os.environ.get("LMSTUDIO_URL", _DEFAULT_LMSTUDIO_URL)
+            base_host = lmstudio_url.split("/v1/")[0] if "/v1/" in lmstudio_url else "http://127.0.0.1:1234"
+            models_url = f"{base_host}/v1/models"
+            lmstudio_model = (
+                model_override.strip()
+                if model_override and model_override.strip()
+                else os.environ.get("LMSTUDIO_MODEL", _DEFAULT_LMSTUDIO_MODEL)
+            )
+            try:
+                start_t = time.time()
+                req = urllib.request.Request(models_url, method="GET")
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                latency_ms = int((time.time() - start_t) * 1000)
+                models = [m.get("id", "") for m in data.get("data", []) if isinstance(m, dict)]
+                active_model = models[0] if models and not model_override else lmstudio_model
+                return {
+                    "provider": "lmstudio",
+                    "ok": True,
+                    "model_id": active_model,
+                    "available_models": models,
+                    "endpoint": lmstudio_url,
+                    "latency_ms": latency_ms,
+                    "error": None,
+                }
+            except Exception as exc:
+                return {
+                    "provider": "lmstudio",
+                    "ok": False,
+                    "model_id": lmstudio_model,
+                    "endpoint": lmstudio_url,
+                    "latency_ms": None,
+                    "error": f"LM Studio unreachable at {lmstudio_url}: {exc}",
+                }
+
+        return {
+            "provider": provider,
+            "ok": False,
+            "model_id": "unknown",
+            "latency_ms": None,
+            "error": f"Unknown provider '{provider}'",
+        }
 
     # ── Gemini API cloud cascade ────────────────────────────────────────────
     async def _cloud_cascade(
@@ -183,7 +315,6 @@ class Gemma4Router:
             contents.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
         contents.append(prompt)
 
-        # Build cascade list: default "gemma-4-26b-a4b-it", cascade to "gemma-4-31b-it"
         env_primary = os.environ.get("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it").strip()
         env_fallbacks = os.environ.get("GEMMA_FALLBACK_MODELS", "").strip()
 
@@ -235,18 +366,17 @@ class Gemma4Router:
                     exc,
                 )
 
-        raise RuntimeError(f"Gemma 4 inference failed across cascade {cascade}: {last_error}")
+        raise RuntimeError(f"Gemini API connection/inference failed across {cascade}: {last_error}")
 
-    # ── Local Ollama inference ──────────────────────────────────────────────
+    # ── Local Ollama inference (NO cloud fallback) ──────────────────────────
     async def _ollama(
         self,
         prompt: str,
         image_bytes: Optional[bytes],
         mime_type: str,
-        active_api_key: str,
         ollama_model_override: Optional[str] = None,
     ) -> dict[str, Any]:
-        """Call local Ollama instance and optionally cascade to Gemini API if unreachable."""
+        """Call local Ollama instance directly. Never falls back to Gemini API."""
         ollama_url = os.environ.get("OLLAMA_URL", _DEFAULT_OLLAMA_URL)
         ollama_model = (
             ollama_model_override.strip()
@@ -292,18 +422,97 @@ class Gemma4Router:
             logger.info("Ollama inference succeeded: model=%s latency=%dms", ollama_model, latency_ms)
             return result
 
-        except (urllib.error.URLError, OSError, ConnectionError) as exc:
-            logger.warning("Local Ollama unreachable at %s (%s).", ollama_url, exc)
-            if active_api_key:
-                logger.info("Falling back from unreachable Ollama to Gemini API Gemma 4 cascade.")
-                result = await self._cloud_cascade(
-                    prompt=prompt,
-                    image_bytes=image_bytes,
-                    mime_type=mime_type,
-                    active_api_key=active_api_key,
-                )
-                result["engine_used"] = f"{result['engine_used']} (ollama-fallback)"
-                return result
+        except urllib.error.HTTPError as exc:
+            err_body = ""
+            try:
+                err_body = exc.read().decode("utf-8")[:300]
+            except Exception:
+                pass
             raise RuntimeError(
-                f"Local Ollama server is unreachable at {ollama_url} and GEMINI_API_KEY is missing in .env."
+                f"Ollama HTTP {exc.code} error at {ollama_url} (model '{ollama_model}'): {err_body or exc.reason}"
+            ) from exc
+        except (urllib.error.URLError, OSError, ConnectionError) as exc:
+            raise RuntimeError(
+                f"Cannot connect to local Ollama at {ollama_url} (model '{ollama_model}'): {exc}. "
+                "Ensure 'ollama serve' is running locally."
+            ) from exc
+
+    # ── Local LM Studio inference (OpenAI-compatible /v1/chat/completions) ──
+    async def _lmstudio(
+        self,
+        prompt: str,
+        image_bytes: Optional[bytes],
+        mime_type: str,
+        model_override: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Call local LM Studio server directly. Never falls back to Gemini API."""
+        lmstudio_url = os.environ.get("LMSTUDIO_URL", _DEFAULT_LMSTUDIO_URL)
+        lmstudio_model = (
+            model_override.strip()
+            if model_override and model_override.strip()
+            else os.environ.get("LMSTUDIO_MODEL", _DEFAULT_LMSTUDIO_MODEL)
+        )
+
+        if image_bytes:
+            b64_img = base64.b64encode(image_bytes).decode("ascii")
+            content: Any = [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime_type};base64,{b64_img}"},
+                },
+                {"type": "text", "text": prompt},
+            ]
+        else:
+            content = prompt
+
+        payload = json.dumps(
+            {
+                "model": lmstudio_model,
+                "messages": [{"role": "user", "content": content}],
+                "temperature": _DEFAULT_TEMPERATURE,
+                "stream": False,
+            }
+        ).encode("utf-8")
+
+        req = urllib.request.Request(
+            lmstudio_url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        try:
+            start_t = time.time()
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+            latency_ms = int((time.time() - start_t) * 1000)
+
+            choices = body.get("choices", [])
+            raw_text = (
+                choices[0].get("message", {}).get("content", "")
+                if choices and isinstance(choices[0], dict)
+                else ""
+            )
+            used_model = body.get("model") or lmstudio_model
+            result = extract_json_safely(raw_text)
+            result["engine_used"] = f"lmstudio/{used_model}"
+            result["model_id"] = used_model
+            result["latency_ms"] = latency_ms
+
+            logger.info("LM Studio inference succeeded: model=%s latency=%dms", used_model, latency_ms)
+            return result
+
+        except urllib.error.HTTPError as exc:
+            err_body = ""
+            try:
+                err_body = exc.read().decode("utf-8")[:300]
+            except Exception:
+                pass
+            raise RuntimeError(
+                f"LM Studio HTTP {exc.code} error at {lmstudio_url} (model '{lmstudio_model}'): {err_body or exc.reason}"
+            ) from exc
+        except (urllib.error.URLError, OSError, ConnectionError) as exc:
+            raise RuntimeError(
+                f"Cannot connect to local LM Studio server at {lmstudio_url} (model '{lmstudio_model}'): {exc}. "
+                "Ensure LM Studio Local Server is running on port 1234."
             ) from exc

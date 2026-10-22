@@ -174,6 +174,23 @@
         class="px-2.5 py-1 rounded bg-[#0b0d13] border border-[#1e2330] font-mono-code text-[11px] text-slate-300">
         Model: gemma-4-26b-a4b-it • Latency: -- ms
       </div>
+
+      <!-- Live Provider Connection & Latency Pills -->
+      <div class="flex items-center gap-1.5 font-mono-code text-[10px]">
+        <span id="pingGeminiBadge" class="px-2 py-0.5 rounded bg-[#0b0d13] border border-[#1e2330] text-slate-400">
+          Gemini API: Testing...
+        </span>
+        <span id="pingOllamaBadge" class="px-2 py-0.5 rounded bg-[#0b0d13] border border-[#1e2330] text-slate-400">
+          Ollama: Testing...
+        </span>
+        <span id="pingLmstudioBadge" class="px-2 py-0.5 rounded bg-[#0b0d13] border border-[#1e2330] text-slate-400">
+          LM Studio: Testing...
+        </span>
+        <button id="testConnBtn" onclick="testAllConnections(true)"
+          class="btn-neutral px-2 py-0.5 rounded text-[10px] font-sans font-medium">
+          Test Connection
+        </button>
+      </div>
     </div>
 
     <!-- Right: Reviewer Role, Engine Selector, Voice Toggle, Reset Session -->
@@ -197,14 +214,15 @@
           class="bg-transparent text-xs font-medium text-slate-200 focus:outline-none cursor-pointer">
           <option value="gemini_api" selected class="bg-[#12151e]">Gemini API: Gemma 4</option>
           <option value="ollama" class="bg-[#12151e]">Local Ollama: Gemma 4</option>
+          <option value="lmstudio" class="bg-[#12151e]">LM Studio: Gemma 4</option>
         </select>
       </div>
 
-      <!-- Conditional Local Ollama Tag Input -->
+      <!-- Conditional Local Model Tag Input (Ollama / LM Studio) -->
       <div id="ollamaModelWrapper" class="hidden items-center gap-1.5 bg-[#0b0d13] border border-[#1e2330] rounded-md px-2.5 py-1.5">
         <span class="text-[11px] text-slate-400">Tag</span>
         <input id="ollamaModelInput" type="text" value="gemma4:12b"
-          class="w-24 bg-transparent font-mono-code text-xs text-slate-200 focus:outline-none" />
+          class="w-28 bg-transparent font-mono-code text-xs text-slate-200 focus:outline-none" />
       </div>
 
       <!-- Optional API Key Override -->
@@ -226,6 +244,19 @@
       </button>
     </div>
   </header>
+
+  <!-- API Connection Diagnostic Error Banner -->
+  <div id="connectionErrorBanner" class="hidden flex-shrink-0 px-5 py-2 bg-[#dc2626]/15 border-b border-[#dc2626] flex items-center justify-between gap-4">
+    <div class="flex items-center gap-2.5 text-xs">
+      <span class="px-1.5 py-0.5 rounded bg-[#dc2626] text-white font-mono-code text-[10px] font-semibold uppercase">
+        Connection Error
+      </span>
+      <span id="connectionErrorText" class="font-mono-code text-xs text-rose-200"></span>
+    </div>
+    <button onclick="hideConnectionError()" class="text-xs font-mono-code text-rose-300 hover:text-white">
+      Dismiss
+    </button>
+  </div>
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -1264,17 +1295,117 @@
       });
     }
 
-    // ─── Header Controls ────────────────────────────────────────────────────
+    // ─── Header Controls & Connection Testing ───────────────────────────────
+    let cachedPingResults = {};
+
+    function showConnectionError(msg) {
+      const banner = document.getElementById('connectionErrorBanner');
+      const textEl = document.getElementById('connectionErrorText');
+      if (textEl) textEl.textContent = msg;
+      if (banner) banner.classList.remove('hidden');
+    }
+
+    function hideConnectionError() {
+      const banner = document.getElementById('connectionErrorBanner');
+      if (banner) banner.classList.add('hidden');
+    }
+
     function toggleProviderModelInput() {
       const provider = document.getElementById('providerSelect')?.value;
       const wrapper = document.getElementById('ollamaModelWrapper');
-      if (!wrapper) return;
-      if (provider === 'ollama') {
-        wrapper.classList.remove('hidden');
-        wrapper.classList.add('flex');
+      const modelInput = document.getElementById('ollamaModelInput');
+      if (wrapper) {
+        if (provider === 'ollama' || provider === 'lmstudio') {
+          wrapper.classList.remove('hidden');
+          wrapper.classList.add('flex');
+          if (modelInput) {
+            if (provider === 'ollama' && modelInput.value === 'gemma-4-12b-it') {
+              modelInput.value = 'gemma4:12b';
+            } else if (provider === 'lmstudio' && modelInput.value === 'gemma4:12b') {
+              modelInput.value = 'gemma-4-12b-it';
+            }
+          }
+        } else {
+          wrapper.classList.add('hidden');
+          wrapper.classList.remove('flex');
+        }
+      }
+
+      // Apply cached connection status or run live check for selected provider
+      const status = cachedPingResults[provider];
+      if (status) {
+        if (status.ok) {
+          hideConnectionError();
+          updateTelemetryBadge(status.model_id, status.latency_ms);
+        } else {
+          updateTelemetryBadge(status.model_id, null);
+          showConnectionError(status.error || `Failed to connect to ${provider}`);
+          appendChat('system', status.error || `Failed to connect to ${provider}`);
+        }
       } else {
-        wrapper.classList.add('hidden');
-        wrapper.classList.remove('flex');
+        testAllConnections(false);
+      }
+    }
+
+    function formatPingBadge(elId, label, info) {
+      const el = document.getElementById(elId);
+      if (!el || !info) return;
+      if (info.ok) {
+        el.textContent = `${label}: ${info.latency_ms} ms`;
+        el.className =
+          'px-2 py-0.5 rounded bg-[#10b981]/10 border border-[#10b981]/50 text-[#10b981]';
+        el.title = `Connected (${info.model_id}) — ${info.latency_ms} ms`;
+      } else {
+        el.textContent = `${label}: Offline`;
+        el.className =
+          'px-2 py-0.5 rounded bg-[#dc2626]/10 border border-[#dc2626]/50 text-[#dc2626]';
+        el.title = info.error || `${label} unreachable`;
+      }
+    }
+
+    async function testAllConnections(verbose = false) {
+      const btn = document.getElementById('testConnBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Testing...';
+      }
+
+      try {
+        const fd = new FormData();
+        fd.append('provider', 'all');
+        fd.append('api_key', document.getElementById('apiKeyInput')?.value || '');
+        fd.append('ollama_model', document.getElementById('ollamaModelInput')?.value || '');
+
+        const resp = await fetch('/api/ping', { method: 'POST', body: fd });
+        const data = await resp.json();
+        const providers = data.providers || {};
+        cachedPingResults = providers;
+
+        formatPingBadge('pingGeminiBadge', 'Gemini API', providers.gemini_api);
+        formatPingBadge('pingOllamaBadge', 'Ollama', providers.ollama);
+        formatPingBadge('pingLmstudioBadge', 'LM Studio', providers.lmstudio);
+
+        const activeProvider = document.getElementById('providerSelect')?.value || 'gemini_api';
+        const activeStatus = providers[activeProvider];
+        if (activeStatus) {
+          if (activeStatus.ok) {
+            hideConnectionError();
+            updateTelemetryBadge(activeStatus.model_id, activeStatus.latency_ms);
+          } else {
+            updateTelemetryBadge(activeStatus.model_id, null);
+            showConnectionError(activeStatus.error);
+            if (verbose) {
+              appendChat('system', activeStatus.error);
+            }
+          }
+        }
+      } catch (err) {
+        showConnectionError(`Backend connection check failed: ${err.message}`);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Test Connection';
+        }
       }
     }
 
@@ -1292,7 +1423,7 @@
       if (!el) return;
       const cleanModel = modelId || 'gemma-4-26b-a4b-it';
       const cleanLatency =
-        typeof latencyMs === 'number' && latencyMs > 0
+        typeof latencyMs === 'number' && latencyMs >= 0
           ? `${latencyMs.toLocaleString()} ms`
           : '-- ms';
       el.textContent = `Model: ${cleanModel} • Latency: ${cleanLatency}`;
@@ -1375,9 +1506,11 @@
         const blob = await getSlideBlob();
         const data = await callInterrogate(blob, optionalMsg);
         removeInterrogationSkeleton();
+        hideConnectionError();
         handleInterrogationResponse(data);
       } catch (err) {
         removeInterrogationSkeleton();
+        showConnectionError(err.message);
         appendChat('system', err.message);
       } finally {
         btn.disabled = false;
@@ -1406,9 +1539,11 @@
         const blob = await getSlideBlob();
         const data = await callInterrogate(blob, msg);
         removeInterrogationSkeleton();
+        hideConnectionError();
         handleInterrogationResponse(data);
       } catch (err) {
         removeInterrogationSkeleton();
+        showConnectionError(err.message);
         appendChat('system', err.message);
       } finally {
         btn.disabled = false;
@@ -1741,7 +1876,9 @@
         fixesList.innerHTML = fixes
           .map((f) => `<li class="py-0.5">${escapeHtml(f)}</li>`)
           .join('');
+        hideConnectionError();
       } catch (err) {
+        showConnectionError(err.message);
         appendChat('system', err.message);
       } finally {
         btn.disabled = false;
@@ -1971,9 +2108,9 @@
       if (isInitialized) return;
       isInitialized = true;
 
-      toggleProviderModelInput();
       updatePersonaBadge();
       await loadSampleDeck('fintech', false);
+      await testAllConnections(false);
 
       if (window.speechSynthesis && window.speechSynthesis.getVoices) {
         window.speechSynthesis.getVoices();
