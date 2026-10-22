@@ -1,0 +1,175 @@
+{
+  "communities": {
+    "0": [
+      "base64",
+      "engine",
+      "engine_extract_json_safely",
+      "engine_rationale_1",
+      "engine_rationale_51",
+      "google",
+      "google_genai",
+      "json",
+      "logging",
+      "os",
+      "re",
+      "typing",
+      "urllib_error",
+      "urllib_request"
+    ],
+    "1": [
+      "app_build_verdict_prompt",
+      "app_get_state",
+      "app_post_skill",
+      "app_rationale_209",
+      "app_rationale_215",
+      "app_rationale_502",
+      "app_rationale_523",
+      "app_rationale_588",
+      "app_reset_state",
+      "app_verdict",
+      "jsonresponse",
+      "post"
+    ],
+    "2": [
+      "any",
+      "engine_gemma4router",
+      "engine_gemma4router_cloud_cascade",
+      "engine_gemma4router_generate",
+      "engine_gemma4router_init",
+      "engine_gemma4router_ollama",
+      "engine_rationale_101",
+      "engine_rationale_134",
+      "engine_rationale_190",
+      "engine_rationale_279"
+    ],
+    "3": [
+      "app",
+      "app_rationale_1",
+      "copy",
+      "fastapi",
+      "fastapi_middleware_cors",
+      "fastapi_responses",
+      "fastapi_staticfiles",
+      "pathlib",
+      "uvicorn"
+    ],
+    "4": [
+      "app_build_interrogation_prompt",
+      "app_clamp",
+      "app_interrogate",
+      "app_rationale_145",
+      "app_rationale_231",
+      "app_rationale_661",
+      "uploadfile"
+    ],
+    "5": [
+      "app_compile_skill_md",
+      "app_get_skill",
+      "app_rationale_411",
+      "app_rationale_495",
+      "get",
+      "plaintextresponse"
+    ]
+  },
+  "cohesion": {
+    "0": 0.16483516483516483,
+    "1": 0.19696969696969696,
+    "2": 0.3111111111111111,
+    "3": 0.2222222222222222,
+    "4": 0.2857142857142857,
+    "5": 0.3333333333333333
+  },
+  "gods": [
+    {
+      "id": "engine_gemma4router",
+      "label": "Gemma4Router",
+      "degree": 7
+    },
+    {
+      "id": "app_interrogate",
+      "label": "interrogate()",
+      "degree": 7
+    },
+    {
+      "id": "engine_extract_json_safely",
+      "label": "extract_json_safely()",
+      "degree": 6
+    },
+    {
+      "id": "app_post_skill",
+      "label": "post_skill()",
+      "degree": 5
+    },
+    {
+      "id": "app_verdict",
+      "label": "verdict()",
+      "degree": 5
+    },
+    {
+      "id": "app_get_skill",
+      "label": "get_skill()",
+      "degree": 5
+    },
+    {
+      "id": "app_get_state",
+      "label": "get_state()",
+      "degree": 4
+    },
+    {
+      "id": "app_reset_state",
+      "label": "reset_state()",
+      "degree": 4
+    },
+    {
+      "id": "app_compile_skill_md",
+      "label": "_compile_skill_md()",
+      "degree": 4
+    },
+    {
+      "id": "app_build_verdict_prompt",
+      "label": "_build_verdict_prompt()",
+      "degree": 3
+    }
+  ],
+  "surprises": [
+    {
+      "source": "get_state()",
+      "target": "get",
+      "source_files": [
+        "app.py",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 1 → community 5"
+    },
+    {
+      "source": "interrogate()",
+      "target": "JSONResponse",
+      "source_files": [
+        "app.py",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 4 → community 1"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `Gemma4Router` connect `Gemma4Router` to `engine.py`, `app.py`?",
+      "why": "High betweenness centrality (0.250) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `interrogate()` connect `interrogate` to `post_skill`, `app.py`?",
+      "why": "High betweenness centrality (0.086) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `get_skill()` connect `get_skill` to `app.py`?",
+      "why": "High betweenness centrality (0.085) - this node is a cross-community bridge."
+    }
+  ]
+}

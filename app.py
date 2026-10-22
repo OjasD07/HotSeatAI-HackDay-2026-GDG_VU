@@ -23,6 +23,10 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -227,6 +231,7 @@ async def interrogate(
     persona: str = Form("sand_hill_vc"),
     provider: str = Form("gemini_api"),
     api_key: str = Form(""),
+    ollama_model: str = Form(""),
 ) -> JSONResponse:
     """Run one interrogation turn against the uploaded slide / verbal answer.
 
@@ -270,6 +275,7 @@ async def interrogate(
         "contradiction_detected": False,
         "contradiction_detail": "",
         "evasion_detected": evasion_hint,
+        "attack_vector_badge": "Unit Economics & Moat Diligence",
         "vc_spoken_response": "I need a moment — could you repeat that?",
         "conviction_delta": 0,
         "simulated_strong_reply": "N/A",
@@ -285,6 +291,7 @@ async def interrogate(
         fallback_dict=fallback,
         provider=provider,
         api_key_override=api_key if api_key else None,
+        ollama_model_override=ollama_model if ollama_model else None,
     )
 
     # ── Normalise model output (defensive — keys may be missing) ────────────
@@ -301,6 +308,18 @@ async def interrogate(
     contradiction_detected: bool = bool(result.get("contradiction_detected", False))
     contradiction_detail: str = result.get("contradiction_detail", "")
     evasion_detected: bool = bool(result.get("evasion_detected", evasion_hint))
+    attack_vector_badge: str = result.get(
+        "attack_vector_badge",
+        (
+            "Cross-Slide Contradiction Audit"
+            if contradiction_detected
+            else (
+                "Founder Evasion Callout"
+                if evasion_detected
+                else "Unit Economics & Moat Diligence"
+            )
+        ),
+    )
     vc_spoken_response: str = result.get(
         "vc_spoken_response", fallback["vc_spoken_response"]
     )
@@ -366,19 +385,31 @@ async def interrogate(
         "conviction_delta": conviction_delta,
         "evasion_detected": evasion_detected,
         "contradiction_detected": contradiction_detected,
+        "attack_vector_badge": attack_vector_badge,
         "engine_used": engine_used,
     }
     SESSION_STATE["history"].append(turn_record)
 
+    evaluation: dict[str, Any] = {
+        "contradiction_detected": contradiction_detected,
+        "contradiction_detail": contradiction_detail,
+        "evasion_detected": evasion_detected,
+        "conviction_delta": conviction_delta,
+        "attack_vector_badge": attack_vector_badge,
+        "vc_spoken_response": vc_spoken_response,
+    }
+
     # ── Build response payload ──────────────────────────────────────────────
     payload: dict[str, Any] = {
         "turn": turn_record,
+        "evaluation": evaluation,
         "visual_claims": visual_claims,
         "detected_industry": SESSION_STATE["detected_industry"],
         "business_model": SESSION_STATE["business_model"],
         "contradiction_detected": contradiction_detected,
         "contradiction_detail": contradiction_detail,
         "evasion_detected": evasion_detected,
+        "attack_vector_badge": attack_vector_badge,
         "vc_spoken_response": vc_spoken_response,
         "conviction_delta": conviction_delta,
         "simulated_strong_reply": simulated_strong_reply,
@@ -584,6 +615,7 @@ Respond ONLY with the JSON object. No markdown fences, no commentary."""
 async def verdict(
     provider: str = Form("gemini_api"),
     api_key: str = Form(""),
+    ollama_model: str = Form(""),
 ) -> JSONResponse:
     """Generate an Investment Committee term-sheet / pass memo.
 
@@ -624,6 +656,7 @@ async def verdict(
         fallback_dict=fallback,
         provider=provider,
         api_key_override=api_key if api_key else None,
+        ollama_model_override=ollama_model if ollama_model else None,
     )
 
     # Normalise output

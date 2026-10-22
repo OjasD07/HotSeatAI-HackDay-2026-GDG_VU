@@ -26,6 +26,10 @@ import urllib.error
 import urllib.request
 from typing import Any, Optional
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from google import genai
 from google.genai import types
 
@@ -40,8 +44,9 @@ _CLOUD_CASCADE: list[str] = [
 ]
 
 _DEFAULT_TEMPERATURE: float = 0.4
-_DEFAULT_OLLAMA_URL: str = "http://localhost:11434/api/chat"
-_DEFAULT_OLLAMA_MODEL: str = "gemma4"
+_DEFAULT_OLLAMA_URL: str = "http://127.0.0.1:11434/api/chat"
+_DEFAULT_OLLAMA_MODEL: str = "gemma4:12b"
+_DEFAULT_OLLAMA_KEEP_ALIVE: str = "30m"
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -119,7 +124,7 @@ class Gemma4Router:
     """
 
     def __init__(self, api_key: Optional[str] = None) -> None:
-        self._api_key: Optional[str] = api_key or os.environ.get("GEMINI_API_KEY")
+        self._api_key: Optional[str] = api_key or os.getenv("GEMINI_API_KEY")
 
     # ── public interface ────────────────────────────────────────────────────
     async def generate(
@@ -130,6 +135,7 @@ class Gemma4Router:
         fallback_dict: Optional[dict] = None,
         provider: str = "ollama",
         api_key_override: Optional[str] = None,
+        ollama_model_override: Optional[str] = None,
     ) -> dict[str, Any]:
         """Generate a JSON response from Gemma 4.
 
@@ -146,8 +152,10 @@ class Gemma4Router:
         provider:
             ``"ollama"`` (default) or ``"gemini_api"``.
         api_key_override:
-            An optional per-request API key (e.g. from a request header)
+            An optional per-request API key (e.g. from UI form override)
             that takes precedence over the instance / env key.
+        ollama_model_override:
+            An optional per-request local Ollama model tag from the UI header.
 
         Returns
         -------
@@ -159,7 +167,11 @@ class Gemma4Router:
         if fallback_dict is None:
             fallback_dict = {}
 
-        effective_key = api_key_override or self._api_key
+        effective_key = (
+            api_key_override.strip()
+            if api_key_override and api_key_override.strip()
+            else (os.getenv("GEMINI_API_KEY") or self._api_key)
+        )
 
         if provider == "gemini_api":
             return await self._cloud_cascade(
@@ -168,7 +180,12 @@ class Gemma4Router:
 
         if provider == "ollama":
             return await self._ollama(
-                prompt, image_bytes, mime_type, fallback_dict, effective_key
+                prompt,
+                image_bytes,
+                mime_type,
+                fallback_dict,
+                effective_key,
+                ollama_model_override=ollama_model_override,
             )
 
         # Unknown provider — surface the error in data, don't crash
@@ -211,9 +228,19 @@ class Gemma4Router:
             )
         contents.append(prompt)
 
+        # Resolve model cascade from env if customized
+        env_fallbacks = os.getenv("GEMMA_FALLBACK_MODELS", "").strip()
+        env_primary = os.getenv("GEMMA_MODEL_ID", "").strip()
+        if env_fallbacks:
+            cascade = [m.strip() for m in env_fallbacks.split(",") if m.strip()]
+        else:
+            cascade = list(_CLOUD_CASCADE)
+        if env_primary and env_primary not in cascade:
+            cascade.insert(0, env_primary)
+
         last_error: Optional[Exception] = None
 
-        for model_id in _CLOUD_CASCADE:
+        for model_id in cascade:
             # ── Attempt 1: structured JSON mode ─────────────────────────────
             try:
                 response = client.models.generate_content(
@@ -275,6 +302,7 @@ class Gemma4Router:
         mime_type: str,
         fallback_dict: dict,
         api_key: Optional[str],
+        ollama_model_override: Optional[str] = None,
     ) -> dict[str, Any]:
         """Call a local Ollama instance and fall back to cloud if unreachable.
 
@@ -282,8 +310,13 @@ class Gemma4Router:
         in the async method so we avoid adding ``httpx`` / ``aiohttp`` as a
         dependency.  For a hackathon-scale app this is perfectly adequate.
         """
-        ollama_url = os.environ.get("OLLAMA_URL", _DEFAULT_OLLAMA_URL)
-        ollama_model = os.environ.get("OLLAMA_MODEL", _DEFAULT_OLLAMA_MODEL)
+        ollama_url = os.getenv("OLLAMA_URL", _DEFAULT_OLLAMA_URL)
+        ollama_model = (
+            ollama_model_override.strip()
+            if ollama_model_override and ollama_model_override.strip()
+            else os.getenv("OLLAMA_MODEL", _DEFAULT_OLLAMA_MODEL)
+        )
+        keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", _DEFAULT_OLLAMA_KEEP_ALIVE)
 
         # Build the Ollama chat payload
         message: dict[str, Any] = {"role": "user", "content": prompt}
@@ -296,6 +329,7 @@ class Gemma4Router:
                 "messages": [message],
                 "stream": False,
                 "format": "json",
+                "keep_alive": keep_alive,
             }
         ).encode("utf-8")
 

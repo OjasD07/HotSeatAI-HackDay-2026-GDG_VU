@@ -13,6 +13,7 @@ python-multipart>=0.0.9
 
 # Data validation & settings
 pydantic>=2.7.0
+python-dotenv>=1.0.1
 
 # Graph / relationship visualisation
 graphifyy>=0.9.38

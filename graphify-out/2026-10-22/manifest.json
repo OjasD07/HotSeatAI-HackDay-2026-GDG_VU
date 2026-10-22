@@ -1,0 +1,62 @@
+{
+  ".claude/settings.json": {
+    "mtime": 1792659036.0328236,
+    "seen": 1792659063.864209,
+    "ast_hash": "3b541b9935fcf0831355da956f897645",
+    "semantic_hash": "3b541b9935fcf0831355da956f897645"
+  },
+  "app.py": {
+    "mtime": 1792660685.0595133,
+    "seen": 1792661673.0577888,
+    "ast_hash": "4ad4234680c3f9e1fd6a2ce27ea134e0",
+    "semantic_hash": ""
+  },
+  "engine.py": {
+    "mtime": 1792660557.5058424,
+    "seen": 1792661673.057791,
+    "ast_hash": "674faf51b21c5902594619d7592e8bec",
+    "semantic_hash": ""
+  },
+  ".claude/CLAUDE.md": {
+    "mtime": 1792659036.0317078,
+    "seen": 1792661673.057792,
+    "ast_hash": "9b31786b637be3c13978bec4c2330752",
+    "semantic_hash": ""
+  },
+  ".claude/skills/pitch-defense/SKILL.md": {
+    "mtime": 1792659360.7740428,
+    "seen": 1792661673.0577931,
+    "ast_hash": "c2486748b1bfc91690d3ecf045a35d49",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1792659036.0326183,
+    "seen": 1792661673.057794,
+    "ast_hash": "67d88e9d0760c3ba54c75dfd9551c1c5",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1792659393.9728615,
+    "seen": 1792661673.057795,
+    "ast_hash": "4569b6428cb64fc88043715ce10acb5d",
+    "semantic_hash": ""
+  },
+  "render.yaml": {
+    "mtime": 1792658973.3937461,
+    "seen": 1792661673.057795,
+    "ast_hash": "02151a442087a528cb16d1a5926f6ebd",
+    "semantic_hash": ""
+  },
+  "requirements.txt": {
+    "mtime": 1792660450.799417,
+    "seen": 1792661673.057796,
+    "ast_hash": "dd3ae86c0b70bafe4616f99e463f433e",
+    "semantic_hash": ""
+  },
+  "static/index.html": {
+    "mtime": 1792661622.5967205,
+    "seen": 1792661673.0577972,
+    "ast_hash": "26c82e770b5e10512e946c23477ae98a",
+    "semantic_hash": ""
+  }
+}

@@ -2,10 +2,11 @@
   "communities": {
     "0": [
       "base64",
+      "dotenv",
       "engine",
       "engine_extract_json_safely",
       "engine_rationale_1",
-      "engine_rationale_51",
+      "engine_rationale_56",
       "google",
       "google_genai",
       "json",
@@ -17,18 +18,19 @@
       "urllib_request"
     ],
     "1": [
-      "app_build_verdict_prompt",
-      "app_get_state",
+      "app_build_interrogation_prompt",
+      "app_interrogate",
       "app_post_skill",
-      "app_rationale_209",
-      "app_rationale_215",
-      "app_rationale_502",
-      "app_rationale_523",
-      "app_rationale_588",
+      "app_rationale_149",
+      "app_rationale_219",
+      "app_rationale_236",
+      "app_rationale_533",
+      "app_rationale_620",
       "app_reset_state",
       "app_verdict",
       "jsonresponse",
-      "post"
+      "post",
+      "uploadfile"
     ],
     "2": [
       "any",
@@ -37,14 +39,18 @@
       "engine_gemma4router_generate",
       "engine_gemma4router_init",
       "engine_gemma4router_ollama",
-      "engine_rationale_101",
-      "engine_rationale_134",
-      "engine_rationale_190",
-      "engine_rationale_279"
+      "engine_rationale_106",
+      "engine_rationale_140",
+      "engine_rationale_207",
+      "engine_rationale_307"
     ],
     "3": [
       "app",
+      "app_build_verdict_prompt",
+      "app_clamp",
       "app_rationale_1",
+      "app_rationale_554",
+      "app_rationale_694",
       "copy",
       "fastapi",
       "fastapi_middleware_cors",
@@ -54,30 +60,53 @@
       "uvicorn"
     ],
     "4": [
-      "app_build_interrogation_prompt",
-      "app_clamp",
-      "app_interrogate",
-      "app_rationale_145",
-      "app_rationale_231",
-      "app_rationale_661",
-      "uploadfile"
+      "readme",
+      "readme_1_local_setup",
+      "readme_2_running_with_local_open_weight_gemma_4_ollama",
+      "readme_3_docker_deployment",
+      "readme_4_graphify_repository_knowledge_graph_graphify_out",
+      "readme_author",
+      "readme_hotseat_ai_universal_vc_pitch_interrogator_cross_slide_contradiction_engine",
+      "readme_key_capabilities",
+      "readme_quickstart",
+      "readme_repository_architecture"
     ],
     "5": [
       "app_compile_skill_md",
       "app_get_skill",
-      "app_rationale_411",
-      "app_rationale_495",
+      "app_get_state",
+      "app_rationale_213",
+      "app_rationale_442",
+      "app_rationale_526",
       "get",
       "plaintextresponse"
+    ],
+    "6": [
+      "claude_skills_pitch_defense_skill",
+      "claude_skills_pitch_defense_skill_1_discovered_cross_slide_contradictions_red_flags",
+      "claude_skills_pitch_defense_skill_2_learned_domain_unit_economics_guardrails_hermes_self_improving_loop",
+      "claude_skills_pitch_defense_skill_3_mandatory_pre_pitch_verification_checklist",
+      "claude_skills_pitch_defense_skill_hotseat_pitch_defense_skill_detecting_from_pitch"
+    ],
+    "7": [
+      "claude",
+      "claude_graphify"
+    ],
+    "8": [
+      "claude_claude",
+      "claude_claude_graphify"
     ]
   },
   "cohesion": {
-    "0": 0.16483516483516483,
-    "1": 0.19696969696969696,
+    "0": 0.1523809523809524,
+    "1": 0.19230769230769232,
     "2": 0.3111111111111111,
-    "3": 0.2222222222222222,
-    "4": 0.2857142857142857,
-    "5": 0.3333333333333333
+    "3": 0.15384615384615385,
+    "4": 0.2,
+    "5": 0.25,
+    "6": 0.4,
+    "7": 1.0,
+    "8": 1.0
   },
   "gods": [
     {
@@ -86,14 +115,14 @@
       "degree": 7
     },
     {
-      "id": "app_interrogate",
-      "label": "interrogate()",
+      "id": "engine_extract_json_safely",
+      "label": "extract_json_safely()",
       "degree": 7
     },
     {
-      "id": "engine_extract_json_safely",
-      "label": "extract_json_safely()",
-      "degree": 6
+      "id": "app_interrogate",
+      "label": "interrogate()",
+      "degree": 7
     },
     {
       "id": "app_post_skill",
@@ -111,9 +140,14 @@
       "degree": 5
     },
     {
-      "id": "app_get_state",
-      "label": "get_state()",
-      "degree": 4
+      "id": "readme_hotseat_ai_universal_vc_pitch_interrogator_cross_slide_contradiction_engine",
+      "label": "🦈 HotSeat AI — Universal VC Pitch Interrogator & Cross-Slide Contradiction Engine",
+      "degree": 5
+    },
+    {
+      "id": "readme_quickstart",
+      "label": "🚀 Quickstart",
+      "degree": 5
     },
     {
       "id": "app_reset_state",
@@ -124,52 +158,31 @@
       "id": "app_compile_skill_md",
       "label": "_compile_skill_md()",
       "degree": 4
-    },
-    {
-      "id": "app_build_verdict_prompt",
-      "label": "_build_verdict_prompt()",
-      "degree": 3
     }
   ],
   "surprises": [
     {
-      "source": "get_state()",
-      "target": "get",
+      "source": "✨ Key Capabilities",
+      "target": "extract_json_safely()",
       "source_files": [
-        "app.py",
-        ""
+        "README.md",
+        "engine.py"
       ],
-      "confidence": "EXTRACTED",
+      "confidence": "INFERRED",
       "relation": "references",
-      "note": "Bridges community 1 → community 5"
-    },
-    {
-      "source": "interrogate()",
-      "target": "JSONResponse",
-      "source_files": [
-        "app.py",
-        ""
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "references",
-      "note": "Bridges community 4 → community 1"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities; peripheral node `✨ Key Capabilities` unexpectedly reaches hub `extract_json_safely()`"
     }
   ],
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `Gemma4Router` connect `Gemma4Router` to `engine.py`, `app.py`?",
-      "why": "High betweenness centrality (0.250) - this node is a cross-community bridge."
+      "question": "Why does `extract_json_safely()` connect `engine.py` to `Gemma4Router`, `🦈 HotSeat AI — Universal VC Pitch Interrogator & Cross-Slide Contradiction Engine`?",
+      "why": "High betweenness centrality (0.230) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `interrogate()` connect `interrogate` to `post_skill`, `app.py`?",
-      "why": "High betweenness centrality (0.086) - this node is a cross-community bridge."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `get_skill()` connect `get_skill` to `app.py`?",
-      "why": "High betweenness centrality (0.085) - this node is a cross-community bridge."
+      "question": "Why does `✨ Key Capabilities` connect `🦈 HotSeat AI — Universal VC Pitch Interrogator & Cross-Slide Contradiction Engine` to `engine.py`?",
+      "why": "High betweenness centrality (0.181) - this node is a cross-community bridge."
     }
   ]
 }

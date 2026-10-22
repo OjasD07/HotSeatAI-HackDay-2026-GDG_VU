@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HotSeat AI — Universal VC Pitch Interrogator & Contradiction Engine</title>
+  <title>HotSeat AI — Cyber-Brutalist VC Pitch Arena & Contradiction Engine</title>
   <meta name="description" content="Industry-agnostic multimodal VC pitch-deck interrogator, cross-slide contradiction detector, and self-improving Agent Skill compiler powered by Gemma 4." />
 
   <!-- Tailwind CSS (CDN) -->
@@ -12,16 +12,18 @@
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-          animation: {
-            'pulse-slow': 'pulse 3s cubic-bezier(0.4,0,0.6,1) infinite',
-            'glow': 'glow 2s ease-in-out infinite alternate',
+          fontFamily: {
+            display: ['Syne', 'system-ui', 'sans-serif'],
+            sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
           },
-          keyframes: {
-            glow: {
-              '0%':   { boxShadow: '0 0 5px rgba(16,185,129,0.3)' },
-              '100%': { boxShadow: '0 0 20px rgba(16,185,129,0.6)' },
-            }
+          colors: {
+            arcadeBg: '#09090f',
+            arcadeCard: '#12121e',
+            neonPink: '#ff2a85',
+            acidMint: '#00f5d4',
+            cyberYellow: '#facc15',
+            electricViolet: '#a855f7',
           }
         }
       }
@@ -31,167 +33,331 @@
   <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-  <!-- Google Fonts: Inter -->
+  <!-- Google Fonts: Syne, Space Grotesk, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
 
   <style>
-    body { font-family: 'Inter', system-ui, sans-serif; background: #020617; }
-    /* Custom scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background-color: #09090f;
+      background-image:
+        radial-gradient(circle at 15% 15%, rgba(255, 42, 133, 0.12), transparent 32%),
+        radial-gradient(circle at 85% 20%, rgba(0, 245, 212, 0.10), transparent 32%),
+        radial-gradient(circle at 50% 85%, rgba(168, 85, 247, 0.10), transparent 38%),
+        radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px, 48px 48px, 48px 48px;
+      color: #f8fafc;
+    }
+
+    .font-display { font-family: 'Syne', system-ui, sans-serif; }
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+
+    /* Custom Neo-Brutalist Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #09090f; border-left: 2px solid #1e1e30; }
+    ::-webkit-scrollbar-thumb { background: #ff2a85; border: 2px solid #09090f; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00f5d4; }
+
+    /* Neo-Brutalist Tactile Cards & Hard Offset Shadows */
+    .brutal-card {
+      background: #12121e;
+      border: 2px solid #2e2e48;
+      box-shadow: 4px 4px 0px #000000;
+    }
+    .brutal-pink {
+      border: 2px solid #ff2a85 !important;
+      box-shadow: 4px 4px 0px #ff2a85 !important;
+    }
+    .brutal-mint {
+      border: 2px solid #00f5d4 !important;
+      box-shadow: 4px 4px 0px #00f5d4 !important;
+    }
+    .brutal-yellow {
+      border: 2px solid #facc15 !important;
+      box-shadow: 4px 4px 0px #facc15 !important;
+    }
+    .brutal-violet {
+      border: 2px solid #a855f7 !important;
+      box-shadow: 4px 4px 0px #a855f7 !important;
+    }
+    .brutal-btn {
+      border: 2px solid #f8fafc;
+      box-shadow: 3px 3px 0px #000000;
+      transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .brutal-btn:hover:not(:disabled) {
+      transform: translate(-2px, -2px);
+    }
+    .brutal-btn:active:not(:disabled) {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px #000000 !important;
+    }
+
     /* Slide canvas container */
-    .slide-viewport { aspect-ratio: 5/3; background: #0f172a; border-radius: 0.5rem; overflow: hidden; }
+    .slide-viewport {
+      aspect-ratio: 5/3;
+      background: #07070c;
+      border: 2px solid #383854;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.85);
+    }
+
     /* Pulsing mic */
     @keyframes mic-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
-      50% { box-shadow: 0 0 0 12px rgba(239,68,68,0); }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 42, 133, 0.7), 3px 3px 0px #ff2a85; }
+      50% { box-shadow: 0 0 0 12px rgba(255, 42, 133, 0), 3px 3px 0px #ff2a85; }
     }
-    .mic-recording { animation: mic-pulse 1.2s ease-in-out infinite; background: #ef4444 !important; }
-    /* Conviction bar animation */
-    .conviction-bar { transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1); }
-    /* Score bar animation */
-    .score-bar { transition: width 1s ease-out; }
-    /* Card hover glow */
-    .card-glow:hover { box-shadow: 0 0 30px rgba(16,185,129,0.08); }
+    .mic-recording {
+      animation: mic-pulse 1.1s ease-in-out infinite;
+      background: #ff2a85 !important;
+      color: #ffffff !important;
+      border-color: #ffffff !important;
+    }
+
+    /* Fighting-game health/hype bar */
+    .conviction-bar {
+      transition: width 0.75s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background-image: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.16),
+        rgba(255, 255, 255, 0.16) 8px,
+        transparent 8px,
+        transparent 16px
+      );
+    }
+    .score-bar { transition: width 0.9s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+    /* Screen Shake for Contradiction / Dodge */
+    @keyframes arena-shake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      15% { transform: translate(-6px, -3px) rotate(-0.8deg); }
+      30% { transform: translate(6px, 2px) rotate(0.8deg); }
+      45% { transform: translate(-5px, 3px) rotate(-0.5deg); }
+      60% { transform: translate(5px, -2px) rotate(0.5deg); }
+      75% { transform: translate(-3px, 1px) rotate(-0.3deg); }
+    }
+    .shake-arena {
+      animation: arena-shake 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    /* Floating Score Popup (+10 🔥 / -15 💀) */
+    @keyframes float-up-fade {
+      0% { opacity: 1; transform: translateY(0) scale(0.85) rotate(-4deg); }
+      40% { opacity: 1; transform: translateY(-18px) scale(1.15) rotate(3deg); }
+      100% { opacity: 0; transform: translateY(-42px) scale(0.95) rotate(0deg); }
+    }
+    .score-popup {
+      animation: float-up-fade 1.35s ease-out forwards;
+      pointer-events: none;
+    }
+
+    /* Rubber Stamp Slam Animation */
+    @keyframes stamp-slam {
+      0% { opacity: 0; transform: scale(2.4) rotate(-14deg); }
+      60% { opacity: 1; transform: scale(0.92) rotate(-4deg); }
+      80% { transform: scale(1.04) rotate(-2deg); }
+      100% { opacity: 1; transform: scale(1) rotate(-3deg); }
+    }
+    .rubber-stamp {
+      animation: stamp-slam 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
     /* Tab active */
-    .tab-active { border-bottom: 2px solid #10b981; color: #10b981; }
-    .tab-inactive { border-bottom: 2px solid transparent; color: #94a3b8; }
-    .tab-inactive:hover { color: #cbd5e1; }
+    .tab-active {
+      background: #1a1a2e;
+      border-bottom: 3px solid #00f5d4;
+      color: #00f5d4;
+    }
+    .tab-inactive {
+      border-bottom: 3px solid transparent;
+      color: #94a3b8;
+    }
+    .tab-inactive:hover { color: #f8fafc; background: rgba(255,255,255,0.03); }
+
     /* Contradiction callout */
-    .contradiction-box { border-left: 3px solid #f43f5e; background: rgba(244,63,94,0.08); }
-    /* Chip buttons */
-    .sim-chip { transition: all 0.2s; }
-    .sim-chip:hover { transform: translateY(-1px); }
+    .contradiction-box {
+      border: 2px solid #ff2a85;
+      box-shadow: 4px 4px 0px #ff2a85;
+      background: rgba(255, 42, 133, 0.14);
+    }
+
     /* Hide file input */
     .file-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
   </style>
 </head>
 
-<body class="bg-slate-950 text-slate-200 min-h-screen">
+<body class="min-h-screen selection:bg-[#ff2a85] selection:text-white">
+
+  <!-- Confetti Overlay Canvas for Term Sheet Celebrations -->
+  <canvas id="confettiCanvas" class="fixed inset-0 pointer-events-none z-[100] hidden"></canvas>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
-       STICKY TOP NAVIGATION BAR
+       STICKY TOP NEO-BRUTALIST ARCADE HEADER BAR
        ═══════════════════════════════════════════════════════════════════════ -->
-  <nav class="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/60">
-    <div class="max-w-[1650px] mx-auto px-4 py-2.5 flex flex-wrap items-center gap-3">
+  <nav class="sticky top-0 z-50 bg-[#09090f]/95 backdrop-blur-md border-b-2 border-[#2e2e48]">
+    <div class="max-w-[1680px] mx-auto px-4 py-2.5 flex flex-wrap items-center gap-2.5">
 
       <!-- Brand -->
       <div class="flex items-center gap-2.5 mr-2">
-        <span class="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-bold tracking-wider uppercase border border-emerald-500/20">Gemma 4 Multimodal</span>
-        <h1 class="text-lg font-extrabold tracking-tight text-white">HotSeat<span class="text-emerald-400">AI</span></h1>
-        <span class="hidden sm:inline text-[11px] text-slate-500 max-w-[200px] leading-tight">Universal VC Pitch Interrogator & Contradiction Engine</span>
+        <span class="px-2.5 py-1 rounded bg-[#ff2a85] text-white font-mono-code text-[10px] font-extrabold tracking-widest uppercase border-2 border-white shadow-[2px_2px_0px_#00f5d4] -rotate-1">
+          ⚡ GEMMA 4 ARENA
+        </span>
+        <h1 class="font-display text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+          HOTSEAT<span class="text-[#00f5d4]">.AI</span>
+        </h1>
+        <span class="hidden xl:inline text-[11px] font-medium text-slate-400 border-l-2 border-slate-700 pl-2.5">
+          Pitch Interrogator &amp; Cross-Slide Contradiction Engine
+        </span>
       </div>
 
       <div class="flex-1"></div>
 
       <!-- Persona Selector -->
-      <select id="personaSelect" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer">
+      <select id="personaSelect" onchange="updatePersonaBadge()"
+        class="bg-[#12121e] border-2 border-[#a855f7] text-white text-xs font-bold rounded-lg px-2.5 py-1.5 shadow-[3px_3px_0px_#a855f7] focus:outline-none cursor-pointer">
         <option value="sand_hill_vc">🦈 Sand Hill Tier-1 VC</option>
-        <option value="ruthless_cfo">📊 Ruthless PE / CFO Auditor</option>
+        <option value="ruthless_cfo">🧮 Ruthless PE / CFO Auditor</option>
         <option value="enterprise_buyer">🏢 Skeptical Enterprise Buyer</option>
-        <option value="demo_day_judge">🏆 Hackathon Demo-Day Judge</option>
+        <option value="demo_day_judge">⚡ Hackathon Demo-Day Judge</option>
       </select>
 
       <!-- Engine Selector -->
-      <select id="providerSelect" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer">
+      <select id="providerSelect" onchange="toggleProviderModelInput()"
+        class="bg-[#12121e] border-2 border-[#00f5d4] text-white text-xs font-bold rounded-lg px-2.5 py-1.5 shadow-[3px_3px_0px_#00f5d4] focus:outline-none cursor-pointer">
         <option value="gemini_api">☁️ Gemini API: Gemma 4 (gemma-4-26b-a4b-it)</option>
         <option value="ollama">💻 Local Ollama: Gemma 4 (Open-Weight)</option>
       </select>
 
-      <!-- API Key -->
-      <input id="apiKeyInput" type="password" placeholder="Optional: Gemini API Key override"
-        class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-2.5 py-1.5 w-48 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 placeholder:text-slate-600" />
+      <!-- Editable Local Model Tag Pill (Shown when Local Ollama is selected) -->
+      <div id="ollamaModelWrapper" class="hidden items-center gap-1.5 bg-[#12121e] border-2 border-[#facc15] rounded-lg px-2 py-1 shadow-[3px_3px_0px_#facc15]">
+        <span class="font-mono-code text-[10px] font-extrabold text-[#facc15] uppercase">TAG:</span>
+        <input id="ollamaModelInput" type="text" value="gemma4:12b" placeholder="gemma4:12b"
+          class="bg-transparent text-white font-mono-code text-xs font-bold w-28 focus:outline-none"
+          title="Custom Local Ollama Model Tag (e.g. gemma4:12b, gemma4:latest)" />
+      </div>
+
+      <!-- API Key Override -->
+      <input id="apiKeyInput" type="password" placeholder="🔑 Optional: Gemini API Key"
+        class="bg-[#12121e] border-2 border-slate-600 focus:border-[#facc15] text-slate-200 font-mono-code text-xs rounded-lg px-2.5 py-1.5 w-48 focus:outline-none placeholder:text-slate-500" />
 
       <!-- Voice TTS Toggle -->
       <button id="ttsToggleBtn" onclick="toggleTTS()"
-        class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">
+        class="brutal-btn px-3 py-1.5 rounded-lg text-xs font-extrabold bg-[#12121e] text-[#00f5d4] border-2 border-[#00f5d4] shadow-[3px_3px_0px_#00f5d4] hover:-translate-y-0.5 active:translate-y-0.5 transition-all">
         🔊 Voice ON
       </button>
 
       <!-- Reset -->
       <button id="resetBtn" onclick="resetSession()"
-        class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/25 hover:bg-rose-500/25 transition-colors">
-        ↺ Reset Session
+        class="brutal-btn px-3 py-1.5 rounded-lg text-xs font-extrabold bg-[#ff2a85]/20 text-[#ff2a85] border-2 border-[#ff2a85] shadow-[3px_3px_0px_#ff2a85] hover:-translate-y-0.5 active:translate-y-0.5 transition-all">
+        ↺ Reset Arena
       </button>
     </div>
   </nav>
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
-       MAIN 12-COLUMN GRID
+       MAIN 12-COLUMN ARCADE ARENA GRID
        ═══════════════════════════════════════════════════════════════════════ -->
-  <main class="max-w-[1650px] mx-auto p-4 grid grid-cols-12 gap-4" style="min-height: calc(100vh - 56px);">
+  <main class="max-w-[1680px] mx-auto p-4 grid grid-cols-12 gap-4" style="min-height: calc(100vh - 64px);">
 
 
     <!-- ═══════════════════════════════════════════════════════════════════
          LEFT PANEL — Pitch Stage & Visual Claim Extractor (4 cols)
          ═══════════════════════════════════════════════════════════════════ -->
-    <section class="col-span-12 lg:col-span-4 flex flex-col gap-3">
+    <section class="col-span-12 lg:col-span-4 flex flex-col gap-3.5">
 
-      <!-- Sample Deck Buttons -->
-      <div class="flex gap-2">
-        <button onclick="loadSampleDeck('fintech')"
-          class="flex-1 px-2.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-700/60 hover:border-emerald-500/40 hover:bg-slate-800 transition-all text-slate-300">
-          🏦 FinTech Deck<span class="block text-[10px] text-slate-500">(3 Slides)</span>
+      <!-- 3 Built-In Sample Deck Buttons (Cyber Yellow Accent) -->
+      <div class="grid grid-cols-3 gap-2">
+        <button id="deckBtnFintech" onclick="loadSampleDeck('fintech')"
+          class="brutal-yellow bg-[#12121e] hover:bg-[#facc15]/15 px-2.5 py-2 rounded-lg text-xs font-extrabold text-white hover:-translate-y-0.5 active:translate-y-0.5 transition-all text-left">
+          🏦 FinTech
+          <span class="block font-mono-code text-[10px] text-[#facc15] font-semibold">3 Slides • Trap</span>
         </button>
-        <button onclick="loadSampleDeck('medtech')"
-          class="flex-1 px-2.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-700/60 hover:border-violet-500/40 hover:bg-slate-800 transition-all text-slate-300">
-          🧬 MedTech Deck<span class="block text-[10px] text-slate-500">(3 Slides)</span>
+        <button id="deckBtnMedtech" onclick="loadSampleDeck('medtech')"
+          class="brutal-card hover:border-[#facc15] px-2.5 py-2 rounded-lg text-xs font-extrabold text-white hover:-translate-y-0.5 active:translate-y-0.5 transition-all text-left">
+          🧬 MedTech
+          <span class="block font-mono-code text-[10px] text-[#00f5d4] font-semibold">3 Slides • Trap</span>
         </button>
-        <button onclick="loadSampleDeck('d2c')"
-          class="flex-1 px-2.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-700/60 hover:border-amber-500/40 hover:bg-slate-800 transition-all text-slate-300">
-          🥤 D2C Retail Deck<span class="block text-[10px] text-slate-500">(3 Slides)</span>
+        <button id="deckBtnD2c" onclick="loadSampleDeck('d2c')"
+          class="brutal-card hover:border-[#facc15] px-2.5 py-2 rounded-lg text-xs font-extrabold text-white hover:-translate-y-0.5 active:translate-y-0.5 transition-all text-left">
+          🥤 D2C Soda
+          <span class="block font-mono-code text-[10px] text-[#ff2a85] font-semibold">3 Slides • Trap</span>
         </button>
       </div>
 
-      <!-- Slide Viewport -->
-      <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-2 card-glow">
+      <!-- Slide Viewport Card -->
+      <div class="brutal-card rounded-xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-display text-xs font-extrabold uppercase tracking-wider text-[#facc15]">
+            📽️ Pitch Deck Stage
+          </span>
+          <span id="slideIndicator" class="font-mono-code text-xs font-extrabold px-2 py-0.5 rounded bg-black/60 text-[#00f5d4] border border-[#00f5d4]/40">
+            Slide 1 of 3
+          </span>
+        </div>
+
         <div class="slide-viewport flex items-center justify-center relative">
-          <canvas id="slideCanvas" width="1280" height="768" class="w-full h-full object-contain rounded-lg"></canvas>
-          <div id="slideEmptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600 pointer-events-none">
-            <svg class="w-12 h-12 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-            <span class="text-xs">Upload a deck or choose a sample</span>
+          <canvas id="slideCanvas" width="1280" height="768" class="w-full h-full object-contain rounded"></canvas>
+          <div id="slideEmptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
+            <span class="text-xs font-bold">Upload a deck or choose a sample</span>
           </div>
         </div>
 
-        <!-- File Upload -->
+        <!-- Custom Image & PDF Upload -->
         <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp,image/*" multiple class="file-hidden" onchange="handleFileUpload(event)" />
         <button onclick="document.getElementById('fileInput').click()"
-          class="w-full mt-2 px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700/60 hover:bg-slate-700 transition-colors text-slate-400">
-          📄 Upload PDF Deck or Slide Images (.pdf, .png, .jpg, .webp)
+          class="w-full mt-2.5 px-3 py-2 rounded-lg text-xs font-bold bg-[#1a1a2e] border-2 border-dashed border-slate-500 hover:border-[#00f5d4] hover:text-[#00f5d4] text-slate-300 hover:-translate-y-0.5 active:translate-y-0.5 transition-all">
+          📄 Upload Custom PDF Deck or Slide Images (.pdf, .png, .jpg, .webp)
         </button>
 
-        <!-- Slide Navigation -->
-        <div class="flex items-center gap-2 mt-2">
-          <button id="prevSlideBtn" onclick="prevSlide()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">◀ Prev Slide</button>
-          <span id="slideIndicator" class="flex-1 text-center text-xs text-slate-500">Slide 0 of 0</span>
-          <button id="nextSlideBtn" onclick="nextSlide()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">Next Slide ▶</button>
+        <!-- Slide Navigation Controls -->
+        <div class="flex items-center gap-2 mt-2.5">
+          <button id="prevSlideBtn" onclick="prevSlide()"
+            class="flex-1 px-3 py-2 rounded-lg text-xs font-extrabold bg-[#1a1a2e] border-2 border-slate-600 hover:border-white text-white hover:-translate-y-0.5 active:translate-y-0.5 transition-all">
+            ◀ Prev Slide
+          </button>
+          <button id="nextSlideBtn" onclick="nextSlide()"
+            class="flex-1 px-3 py-2 rounded-lg text-xs font-extrabold bg-[#1a1a2e] border-2 border-slate-600 hover:border-white text-white hover:-translate-y-0.5 active:translate-y-0.5 transition-all">
+            Next Slide ▶
+          </button>
         </div>
+
+        <!-- Primary Action Button (Cyber Yellow Neo-Brutalist) -->
         <button id="pitchSlideBtn" onclick="pitchCurrentSlide()"
-          class="w-full mt-2 px-3 py-2.5 rounded-lg text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98]">
+          class="w-full mt-3 px-4 py-3 rounded-xl font-display text-sm font-extrabold uppercase tracking-wide bg-[#facc15] hover:bg-[#fde047] text-black border-2 border-white shadow-[4px_4px_0px_#ff2a85] hover:-translate-y-0.5 active:translate-y-0.5 transition-all">
           🔍 Pitch This Slide to VC
         </button>
       </div>
 
-      <!-- Gemma 4 Vision Extraction Card -->
-      <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-4 card-glow">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">👁️ Gemma 4 Vision Extraction</h3>
+      <!-- Gemma 4 Vision Extraction Card (Acid Mint Accent) -->
+      <div class="brutal-card brutal-mint rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-display text-xs font-extrabold text-[#00f5d4] uppercase tracking-wider">
+            👁️ Gemma 4 Vision Scanner
+          </h3>
+          <span class="font-mono-code text-[10px] px-1.5 py-0.5 rounded bg-[#00f5d4]/15 text-[#00f5d4] border border-[#00f5d4]/40">
+            PIXEL OCR + AST
+          </span>
+        </div>
+
         <div class="flex gap-2 mb-3 flex-wrap">
-          <div class="flex items-center gap-1.5">
-            <span class="text-[10px] text-slate-500 uppercase">Industry</span>
-            <span id="industryPill" class="px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-400 text-[11px] font-semibold border border-violet-500/20">Detecting...</span>
+          <div class="flex items-center gap-1.5 bg-black/50 px-2.5 py-1 rounded-lg border border-[#a855f7]/50">
+            <span class="font-mono-code text-[10px] text-slate-400 uppercase">SECTOR:</span>
+            <span id="industryPill" class="text-[11px] font-extrabold text-[#a855f7]">Detecting...</span>
           </div>
-          <div class="flex items-center gap-1.5">
-            <span class="text-[10px] text-slate-500 uppercase">Model</span>
-            <span id="bizModelPill" class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[11px] font-semibold border border-amber-500/20">Analyzing...</span>
+          <div class="flex items-center gap-1.5 bg-black/50 px-2.5 py-1 rounded-lg border border-[#facc15]/50">
+            <span class="font-mono-code text-[10px] text-slate-400 uppercase">MODEL:</span>
+            <span id="bizModelPill" class="text-[11px] font-extrabold text-[#facc15]">Analyzing...</span>
           </div>
         </div>
-        <div id="visualClaimsList" class="space-y-1.5 text-xs text-slate-400">
-          <p class="italic text-slate-600">No claims extracted yet. Pitch a slide to begin.</p>
+
+        <div id="visualClaimsList" class="space-y-1.5 text-xs text-slate-300">
+          <p class="italic text-slate-500">No claims extracted yet. Click "Pitch This Slide to VC" to scan slide pixels!</p>
         </div>
       </div>
     </section>
@@ -200,86 +366,125 @@
     <!-- ═══════════════════════════════════════════════════════════════════
          CENTER PANEL — Live HotSeat Interrogation Arena (5 cols)
          ═══════════════════════════════════════════════════════════════════ -->
-    <section class="col-span-12 lg:col-span-5 flex flex-col gap-3">
+    <section id="centerArenaPanel" class="col-span-12 lg:col-span-5 flex flex-col gap-3.5">
 
-      <!-- 3 Telemetry Cards -->
-      <div class="grid grid-cols-3 gap-2">
-        <!-- Conviction Score -->
-        <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-3 card-glow">
-          <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">VC Conviction</div>
-          <div class="flex items-end gap-1.5">
-            <span id="convictionValue" class="text-2xl font-black text-emerald-400 leading-none">50</span>
-            <span class="text-xs text-slate-500">/100</span>
-            <span id="convictionDelta" class="ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-500">+0</span>
+      <!-- 3 Arcade Fighting-Game Telemetry Cards -->
+      <div class="grid grid-cols-3 gap-2.5">
+
+        <!-- Fighting-Game Conviction vs Roast Hype Bar -->
+        <div class="brutal-card rounded-xl p-3 relative overflow-visible">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-display text-[10px] text-[#00f5d4] uppercase tracking-wider font-extrabold">
+              ⚡ VC Conviction
+            </span>
+            <span id="convictionDelta" class="font-mono-code px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-black text-slate-400 border border-slate-700">
+              +0
+            </span>
           </div>
-          <div class="mt-2 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-            <div id="convictionBar" class="conviction-bar h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style="width:50%"></div>
+
+          <!-- Floating Score Popup Container -->
+          <div id="convictionPopupAnchor" class="relative"></div>
+
+          <div class="flex items-baseline gap-1">
+            <span id="convictionValue" class="font-mono-code text-2xl font-extrabold text-[#00f5d4] leading-none">50</span>
+            <span class="font-mono-code text-xs text-slate-400">/100 HP</span>
+          </div>
+
+          <div class="mt-2 h-3 bg-black rounded border-2 border-slate-700 overflow-hidden p-0.5">
+            <div id="convictionBar" class="conviction-bar h-full rounded-sm bg-gradient-to-r from-[#00f5d4] to-emerald-400" style="width:50%"></div>
           </div>
         </div>
 
-        <!-- Skepticism Heat -->
-        <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-3 card-glow">
-          <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Skepticism Heat</div>
-          <span id="skepticismBadge" class="inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20 mt-1">
-            PROBING
+        <!-- Skepticism / Roast Heat -->
+        <div class="brutal-card rounded-xl p-3 flex flex-col justify-between">
+          <div class="font-display text-[10px] text-[#facc15] uppercase tracking-wider font-extrabold">
+            🔥 Roast Heat
+          </div>
+          <div>
+            <span id="skepticismBadge" class="inline-block px-2.5 py-1 rounded-md font-mono-code text-[11px] font-extrabold bg-[#00f5d4]/15 text-[#00f5d4] border-2 border-[#00f5d4]">
+              🔍 PROBING
+            </span>
+          </div>
+        </div>
+
+        <!-- 3-Strike Contradiction / Evasion Counter -->
+        <div class="brutal-card rounded-xl p-3 flex flex-col justify-between">
+          <div class="font-display text-[10px] text-[#ff2a85] uppercase tracking-wider font-extrabold">
+            💀 Strikes
+          </div>
+          <div class="flex items-center justify-between mt-1">
+            <div class="flex items-baseline gap-1">
+              <span id="strikesValue" class="font-mono-code text-2xl font-extrabold text-[#ff2a85] leading-none">0</span>
+              <span class="font-mono-code text-xs text-slate-400">/ 3</span>
+            </div>
+            <div class="flex gap-1.5">
+              <span id="strike1" class="w-4 h-4 rounded bg-black border-2 border-slate-600"></span>
+              <span id="strike2" class="w-4 h-4 rounded bg-black border-2 border-slate-600"></span>
+              <span id="strike3" class="w-4 h-4 rounded bg-black border-2 border-slate-600"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable Interrogation Feed with Live Persona Avatar Header -->
+      <div class="flex-1 brutal-card rounded-xl flex flex-col overflow-hidden" style="min-height: 400px;">
+        <div class="px-4 py-2.5 bg-black/60 border-b-2 border-[#2e2e48] flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#ff2a85] animate-ping"></span>
+          <span class="font-display text-xs font-extrabold text-white uppercase tracking-wider">
+            Live HotSeat Arena
+          </span>
+
+          <!-- Live Expressive Persona Avatar Badge -->
+          <span id="livePersonaAvatarBadge"
+            class="px-2.5 py-0.5 rounded-md font-mono-code text-[11px] font-extrabold bg-[#a855f7]/20 text-[#00f5d4] border border-[#00f5d4]/50">
+            🦈 Sand Hill Shark
+          </span>
+
+          <span id="turnCount" class="ml-auto font-mono-code text-[11px] font-bold text-[#facc15]">
+            ROUND 0
           </span>
         </div>
 
-        <!-- Strikes -->
-        <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-3 card-glow">
-          <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Contradiction Strikes</div>
-          <div class="flex items-end gap-1">
-            <span id="strikesValue" class="text-2xl font-black text-rose-400 leading-none">0</span>
-            <span class="text-xs text-slate-500">/ 3 Strikes</span>
-          </div>
-          <div class="flex gap-1 mt-2">
-            <span id="strike1" class="w-3 h-3 rounded-full bg-slate-700 border border-slate-600"></span>
-            <span id="strike2" class="w-3 h-3 rounded-full bg-slate-700 border border-slate-600"></span>
-            <span id="strike3" class="w-3 h-3 rounded-full bg-slate-700 border border-slate-600"></span>
+        <div id="chatFeed" class="flex-1 overflow-y-auto p-4 space-y-3.5">
+          <div class="flex justify-center py-10">
+            <div class="text-center max-w-sm p-4 rounded-xl border-2 border-dashed border-slate-700 bg-black/30">
+              <div class="text-2xl mb-1">🦈⚡</div>
+              <p class="text-xs font-bold text-slate-300">
+                STEP INTO THE ARENA! Click <span class="text-[#facc15]">"🔍 Pitch This Slide to VC"</span> to start the live multimodal interrogation.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Scrollable Interrogation Feed -->
-      <div class="flex-1 bg-slate-900 rounded-xl border border-slate-800/60 flex flex-col overflow-hidden card-glow" style="min-height: 380px;">
-        <div class="px-4 py-2.5 border-b border-slate-800/60 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Live Interrogation Feed</span>
-          <span id="turnCount" class="ml-auto text-[10px] text-slate-600">Turn 0</span>
-        </div>
-        <div id="chatFeed" class="flex-1 overflow-y-auto p-4 space-y-3">
-          <div class="flex justify-center py-8">
-            <span class="text-xs text-slate-600 italic">Upload a pitch deck slide and click "Pitch This Slide to VC" to start the interrogation.</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Simulation Chips -->
-      <div id="simChipsContainer" class="flex gap-2 opacity-40 pointer-events-none transition-opacity">
-        <button id="simStrongBtn" onclick="simulateReply('strong')"
-          class="sim-chip flex-1 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">
+      <!-- 1-Click Judge Simulation Chips -->
+      <div id="simChipsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 opacity-40 pointer-events-none transition-opacity">
+        <button id="simStrongBtn" onclick="useSimReply('strong')"
+          class="brutal-mint bg-[#12121e] hover:bg-[#00f5d4]/15 px-3 py-2.5 rounded-xl text-xs font-extrabold text-[#00f5d4] hover:-translate-y-0.5 active:translate-y-0.5 transition-all text-left">
           💪 Simulate Strong Data-Backed Reply
+          <span class="block text-[10px] font-normal text-slate-300 truncate">1-Click Judge Test: Boosts Conviction</span>
         </button>
-        <button id="simEvasiveBtn" onclick="simulateReply('evasive')"
-          class="sim-chip flex-1 px-3 py-2 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">
+        <button id="simEvasiveBtn" onclick="useSimReply('evasive')"
+          class="brutal-pink bg-[#12121e] hover:bg-[#ff2a85]/15 px-3 py-2.5 rounded-xl text-xs font-extrabold text-[#ff2a85] hover:-translate-y-0.5 active:translate-y-0.5 transition-all text-left">
           🤡 Simulate Evasive Buzzword Dodge
+          <span class="block text-[10px] font-normal text-slate-300 truncate">1-Click Judge Test: Triggers Strike!</span>
         </button>
       </div>
 
-      <!-- Input Dock -->
-      <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-3 flex items-end gap-2 card-glow">
+      <!-- Founder Defense Input Dock -->
+      <div class="brutal-card rounded-xl p-3 flex items-end gap-2.5">
         <button id="micBtn" onclick="toggleMic()"
-          class="flex-shrink-0 w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-lg hover:bg-slate-700 transition-all"
+          class="flex-shrink-0 w-11 h-11 rounded-xl bg-[#1a1a2e] border-2 border-[#00f5d4] shadow-[3px_3px_0px_#00f5d4] flex items-center justify-center text-lg hover:-translate-y-0.5 active:translate-y-0.5 transition-all"
           title="Push to Talk (Instant Barge-In)">
           🎙️
         </button>
         <textarea id="userInput" rows="2"
-          placeholder="Speak via mic or type your defense to the VC..."
-          class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 resize-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 placeholder:text-slate-600"
+          placeholder="Push mic to speak or type your defense to the VC (Barge-In enabled)..."
+          class="flex-1 bg-black/70 border-2 border-slate-700 focus:border-[#00f5d4] rounded-lg px-3 py-2 text-sm text-white resize-none focus:outline-none placeholder:text-slate-500"
           oninput="if(window.speechSynthesis){window.speechSynthesis.cancel()}"
           onkeydown="if(window.speechSynthesis){window.speechSynthesis.cancel()} if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFounderReply()}"></textarea>
         <button id="sendBtn" onclick="sendFounderReply()"
-          class="flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.97]">
+          class="flex-shrink-0 px-4 py-3 rounded-xl font-display text-xs font-extrabold uppercase tracking-wider bg-[#00f5d4] hover:bg-[#2efae0] text-black border-2 border-white shadow-[3px_3px_0px_#a855f7] hover:-translate-y-0.5 active:translate-y-0.5 transition-all">
           Send Defense ↵
         </button>
       </div>
@@ -287,96 +492,100 @@
 
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         RIGHT PANEL — Claim Ledger, Verdict & SKILL.md (3 cols)
+         RIGHT PANEL — Claim Ledger, IC Verdict & Self-Improving SKILL.md (3 cols)
          ═══════════════════════════════════════════════════════════════════ -->
-    <section class="col-span-12 lg:col-span-3 flex flex-col gap-3">
+    <section class="col-span-12 lg:col-span-3 flex flex-col gap-3.5">
 
       <!-- Live Cross-Slide Claim Ledger -->
-      <div class="bg-slate-900 rounded-xl border border-slate-800/60 flex flex-col card-glow" style="max-height: 320px;">
-        <div class="px-4 py-2.5 border-b border-slate-800/60">
-          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">📋 Cross-Slide Claim Ledger</h3>
+      <div class="brutal-card rounded-xl flex flex-col" style="max-height: 290px;">
+        <div class="px-4 py-2.5 bg-black/50 border-b-2 border-[#2e2e48] flex items-center justify-between">
+          <h3 class="font-display text-xs font-extrabold text-[#facc15] uppercase tracking-wider">
+            📋 Cross-Slide Claim Ledger
+          </h3>
+          <span class="font-mono-code text-[10px] text-slate-400">MEMORY BANK</span>
         </div>
         <div id="claimLedgerList" class="flex-1 overflow-y-auto p-3 space-y-1.5 text-xs">
-          <p class="italic text-slate-600 py-4 text-center">Claims will appear here as you pitch slides.</p>
+          <p class="italic text-slate-500 py-4 text-center">Claims will lock in here as you pitch slides.</p>
         </div>
       </div>
 
-      <!-- Verdict / SKILL.md Tabs -->
-      <div class="flex-1 bg-slate-900 rounded-xl border border-slate-800/60 flex flex-col overflow-hidden card-glow">
+      <!-- Verdict / SKILL.md Neo-Brutalist Tabs -->
+      <div class="flex-1 brutal-card brutal-violet rounded-xl flex flex-col overflow-hidden">
         <!-- Tab Headers -->
-        <div class="flex border-b border-slate-800/60">
+        <div class="flex bg-black/60 border-b-2 border-[#2e2e48]">
           <button id="tabVerdict" onclick="switchTab('verdict')"
-            class="flex-1 px-3 py-2.5 text-xs font-semibold tab-active transition-colors">
-            📜 VC Verdict Memo
+            class="flex-1 px-3 py-2.5 font-display text-xs font-extrabold uppercase tracking-wide tab-active transition-colors">
+            📜 IC Verdict
           </button>
           <button id="tabSkill" onclick="switchTab('skill')"
-            class="flex-1 px-3 py-2.5 text-xs font-semibold tab-inactive transition-colors">
-            🧠 Self-Improving SKILL.md
+            class="flex-1 px-3 py-2.5 font-display text-xs font-extrabold uppercase tracking-wide tab-inactive transition-colors">
+            🧠 SKILL.md
           </button>
         </div>
 
-        <!-- Tab 1: Verdict -->
-        <div id="verdictPanel" class="flex-1 overflow-y-auto p-4 space-y-3">
+        <!-- Tab 1: Final IC Verdict & Rubber Stamp -->
+        <div id="verdictPanel" class="flex-1 overflow-y-auto p-4 space-y-3.5">
           <button id="generateVerdictBtn" onclick="generateVerdict()"
-            class="w-full px-3 py-2.5 rounded-lg text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white transition-all hover:shadow-lg hover:shadow-violet-500/20 active:scale-[0.98]">
-            ⚖️ Generate Final VC Verdict & Term Sheet
+            class="w-full px-3 py-3 rounded-xl font-display text-xs font-extrabold uppercase tracking-wider bg-[#a855f7] hover:bg-[#b975f9] text-white border-2 border-white shadow-[4px_4px_0px_#facc15] hover:-translate-y-0.5 active:translate-y-0.5 transition-all">
+            ⚖️ Generate Final VC Verdict &amp; Term Sheet
           </button>
 
-          <div id="verdictContent" class="space-y-3 hidden">
-            <!-- Decision Badge -->
-            <div id="verdictDecisionBox" class="text-center py-3 rounded-lg border">
-              <div id="verdictDecision" class="text-sm font-black"></div>
-              <div id="verdictHeadline" class="text-[11px] text-slate-400 mt-1"></div>
+          <div id="verdictContent" class="space-y-3.5 hidden">
+            <!-- Giant Rotated Rubber-Stamp Badge -->
+            <div id="verdictDecisionBox" class="rubber-stamp text-center py-3.5 px-3 rounded-xl border-2">
+              <div id="verdictStampLabel" class="font-display text-xs font-extrabold tracking-widest uppercase mb-0.5"></div>
+              <div id="verdictDecision" class="font-display text-base font-extrabold uppercase"></div>
+              <div id="verdictHeadline" class="text-[11px] font-medium text-slate-200 mt-1"></div>
             </div>
 
-            <!-- 4 Score Bars -->
+            <!-- 4 Score Progress Bars -->
+            <div class="space-y-2.5 bg-black/40 p-3 rounded-xl border border-slate-800">
+              <div>
+                <div class="flex justify-between font-mono-code text-[11px] mb-1"><span class="text-slate-300">Market &amp; Timing</span><span id="scoreMarket" class="text-[#00f5d4] font-extrabold">0</span></div>
+                <div class="h-2 bg-black rounded border border-slate-700 overflow-hidden"><div id="barMarket" class="score-bar h-full bg-[#00f5d4]" style="width:0%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between font-mono-code text-[11px] mb-1"><span class="text-slate-300">Unit Economics</span><span id="scoreEcon" class="text-[#facc15] font-extrabold">0</span></div>
+                <div class="h-2 bg-black rounded border border-slate-700 overflow-hidden"><div id="barEcon" class="score-bar h-full bg-[#facc15]" style="width:0%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between font-mono-code text-[11px] mb-1"><span class="text-slate-300">Defensibility Moat</span><span id="scoreMoat" class="text-[#a855f7] font-extrabold">0</span></div>
+                <div class="h-2 bg-black rounded border border-slate-700 overflow-hidden"><div id="barMoat" class="score-bar h-full bg-[#a855f7]" style="width:0%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between font-mono-code text-[11px] mb-1"><span class="text-slate-300">Founder Conviction</span><span id="scoreFounder" class="text-[#ff2a85] font-extrabold">0</span></div>
+                <div class="h-2 bg-black rounded border border-slate-700 overflow-hidden"><div id="barFounder" class="score-bar h-full bg-[#ff2a85]" style="width:0%"></div></div>
+              </div>
+            </div>
+
+            <!-- Strength & Fatal Flaw -->
             <div class="space-y-2">
-              <div>
-                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Market &amp; Timing</span><span id="scoreMarket" class="text-emerald-400 font-bold">0</span></div>
-                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="barMarket" class="score-bar h-full rounded-full bg-emerald-500" style="width:0%"></div></div>
+              <div class="p-2.5 rounded-lg bg-[#00f5d4]/10 border-2 border-[#00f5d4]">
+                <div class="font-display text-[10px] text-[#00f5d4] uppercase font-extrabold mb-0.5">💎 Biggest Strength</div>
+                <p id="verdictStrength" class="text-[11px] text-slate-200"></p>
               </div>
-              <div>
-                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Unit Economics</span><span id="scoreEcon" class="text-amber-400 font-bold">0</span></div>
-                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="barEcon" class="score-bar h-full rounded-full bg-amber-500" style="width:0%"></div></div>
-              </div>
-              <div>
-                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Defensibility Moat</span><span id="scoreMoat" class="text-violet-400 font-bold">0</span></div>
-                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="barMoat" class="score-bar h-full rounded-full bg-violet-500" style="width:0%"></div></div>
-              </div>
-              <div>
-                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Founder Conviction</span><span id="scoreFounder" class="text-rose-400 font-bold">0</span></div>
-                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="barFounder" class="score-bar h-full rounded-full bg-rose-500" style="width:0%"></div></div>
+              <div class="p-2.5 rounded-lg bg-[#ff2a85]/10 border-2 border-[#ff2a85]">
+                <div class="font-display text-[10px] text-[#ff2a85] uppercase font-extrabold mb-0.5">💀 Fatal Flaw</div>
+                <p id="verdictFlaw" class="text-[11px] text-slate-200"></p>
               </div>
             </div>
 
-            <!-- Strength & Flaw -->
-            <div class="space-y-2">
-              <div class="p-2.5 rounded-lg bg-emerald-500/8 border border-emerald-500/15">
-                <div class="text-[10px] text-emerald-500 uppercase font-bold mb-0.5">💎 Biggest Strength</div>
-                <p id="verdictStrength" class="text-[11px] text-slate-300"></p>
-              </div>
-              <div class="p-2.5 rounded-lg bg-rose-500/8 border border-rose-500/15">
-                <div class="text-[10px] text-rose-500 uppercase font-bold mb-0.5">💀 Fatal Flaw</div>
-                <p id="verdictFlaw" class="text-[11px] text-slate-300"></p>
-              </div>
-            </div>
-
-            <!-- Deck Fixes -->
-            <div>
-              <div class="text-[10px] text-slate-500 uppercase font-bold mb-1.5">🔧 Mandatory Deck Fixes</div>
-              <ol id="verdictFixes" class="space-y-1 text-[11px] text-slate-400 list-decimal list-inside"></ol>
+            <!-- Mandatory Deck Fixes -->
+            <div class="bg-black/40 p-3 rounded-xl border border-slate-800">
+              <div class="font-display text-[10px] text-[#facc15] uppercase font-extrabold mb-1.5">🔧 Mandatory Deck Fixes</div>
+              <ol id="verdictFixes" class="space-y-1 text-[11px] text-slate-300 list-decimal list-inside"></ol>
             </div>
           </div>
         </div>
 
-        <!-- Tab 2: SKILL.md -->
+        <!-- Tab 2: Self-Improving SKILL.md -->
         <div id="skillPanel" class="flex-1 overflow-y-auto p-4 hidden">
           <button id="downloadSkillBtn" onclick="downloadSkill()"
-            class="w-full mb-3 px-3 py-2 rounded-lg text-xs font-bold bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all">
+            class="w-full mb-3 px-3 py-2.5 rounded-xl font-display text-xs font-extrabold uppercase tracking-wider bg-[#00f5d4] hover:bg-[#2efae0] text-black border-2 border-white shadow-[3px_3px_0px_#a855f7] hover:-translate-y-0.5 active:translate-y-0.5 transition-all">
             ⬇ Download SKILL.md
           </button>
-          <div id="skillPreview">
-            <pre id="skillContent" class="text-[11px] text-slate-400 whitespace-pre-wrap font-mono leading-relaxed">SKILL.md will auto-update as you interrogate slides.</pre>
+          <div id="skillPreview" class="bg-black/70 p-3 rounded-xl border-2 border-slate-800">
+            <pre id="skillContent" class="font-mono-code text-[11px] text-[#00f5d4] whitespace-pre-wrap leading-relaxed">SKILL.md will auto-update as you interrogate slides.</pre>
           </div>
         </div>
       </div>
@@ -1164,7 +1373,7 @@
 
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Load Sample Deck
+  //  Load Sample Deck & Highlight Active Deck Button
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function loadSampleDeck(deckKey) {
     const deck = SAMPLE_DECKS[deckKey];
@@ -1177,6 +1386,129 @@
     currentSlide = 0;
     renderCurrentSlide();
     document.getElementById('slideEmptyState').classList.add('hidden');
+
+    // Highlight active deck button with Cyber Yellow neo-brutalist border
+    const btnMap = {
+      fintech: 'deckBtnFintech',
+      medtech: 'deckBtnMedtech',
+      d2c: 'deckBtnD2c',
+    };
+    Object.entries(btnMap).forEach(([key, id]) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      if (key === deckKey) {
+        btn.classList.add('brutal-yellow');
+        btn.classList.remove('brutal-card');
+      } else {
+        btn.classList.remove('brutal-yellow');
+        btn.classList.add('brutal-card');
+      }
+    });
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Arcade Header Helpers: Local Ollama Model Tag Pill & Live Persona Badge
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function toggleProviderModelInput() {
+    const provider = document.getElementById('providerSelect')?.value;
+    const wrapper = document.getElementById('ollamaModelWrapper');
+    if (!wrapper) return;
+    if (provider === 'ollama') {
+      wrapper.classList.remove('hidden');
+      wrapper.classList.add('flex');
+    } else {
+      wrapper.classList.add('hidden');
+      wrapper.classList.remove('flex');
+    }
+  }
+
+  const PERSONA_ARCADE_META = {
+    sand_hill_vc: { badge: '🦈 Sand Hill Shark', icon: '🦈' },
+    ruthless_cfo: { badge: '🧮 Ruthless CFO', icon: '🧮' },
+    enterprise_buyer: { badge: '🏢 Grumpy Buyer', icon: '🏢' },
+    demo_day_judge: { badge: '⚡ Demo-Day Boss', icon: '⚡' },
+  };
+
+  function updatePersonaBadge(moodSuffix) {
+    const personaKey = document.getElementById('personaSelect')?.value || 'sand_hill_vc';
+    const meta = PERSONA_ARCADE_META[personaKey] || PERSONA_ARCADE_META.sand_hill_vc;
+    const badgeEl = document.getElementById('livePersonaAvatarBadge');
+    if (badgeEl) {
+      badgeEl.textContent = moodSuffix ? `${meta.badge} • ${moodSuffix}` : meta.badge;
+    }
+  }
+
+  function triggerScreenShake() {
+    const arena = document.getElementById('centerArenaPanel');
+    if (!arena) return;
+    arena.classList.remove('shake-arena');
+    void arena.offsetWidth; // force reflow
+    arena.classList.add('shake-arena');
+    setTimeout(() => arena.classList.remove('shake-arena'), 550);
+  }
+
+  function spawnFloatingScorePopup(delta) {
+    if (!delta) return;
+    const anchor = document.getElementById('convictionPopupAnchor');
+    if (!anchor) return;
+    const popup = document.createElement('div');
+    const isPositive = delta > 0;
+    popup.className = `score-popup absolute right-0 -top-4 z-30 px-2 py-0.5 rounded font-mono-code text-xs font-extrabold border-2 ${
+      isPositive
+        ? 'bg-[#00f5d4] text-black border-white shadow-[2px_2px_0px_#000]'
+        : 'bg-[#ff2a85] text-white border-white shadow-[2px_2px_0px_#000]'
+    }`;
+    popup.textContent = isPositive ? `+${delta} 🔥` : `${delta} 💀`;
+    anchor.appendChild(popup);
+    setTimeout(() => popup.remove(), 1400);
+  }
+
+  function triggerConfettiBurst() {
+    const canvas = document.getElementById('confettiCanvas');
+    if (!canvas || typeof canvas.getContext !== 'function') return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = window.innerWidth || 1280;
+    canvas.height = window.innerHeight || 768;
+    canvas.classList.remove('hidden');
+
+    const colors = ['#ff2a85', '#00f5d4', '#facc15', '#a855f7', '#ffffff'];
+    const particles = Array.from({ length: 90 }, () => ({
+      x: canvas.width * (0.25 + Math.random() * 0.5),
+      y: canvas.height * 0.35,
+      vx: (Math.random() - 0.5) * 16,
+      vy: -Math.random() * 14 - 4,
+      size: 6 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * Math.PI * 2,
+      vRot: (Math.random() - 0.5) * 0.25,
+    }));
+
+    let frame = 0;
+    function step() {
+      frame++;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.42;
+        p.rot += p.vRot;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+        ctx.restore();
+      });
+      if (frame < 95) {
+        requestAnimationFrame(step);
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.classList.add('hidden');
+      }
+    }
+    requestAnimationFrame(step);
   }
 
 
@@ -1443,6 +1775,11 @@
     fd.append('provider', document.getElementById('providerSelect').value);
     fd.append('api_key', document.getElementById('apiKeyInput').value);
 
+    const ollamaModelEl = document.getElementById('ollamaModelInput');
+    if (ollamaModelEl && ollamaModelEl.value.trim()) {
+      fd.append('ollama_model', ollamaModelEl.value.trim());
+    }
+
     const resp = await fetch('/api/interrogate', { method: 'POST', body: fd });
     return resp.json();
   }
@@ -1457,13 +1794,13 @@
     skel.id = 'vcLoadingSkeleton';
     skel.className = 'flex gap-2.5 items-start animate-pulse';
     skel.innerHTML = `
-      <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-sm">🦈</div>
-      <div class="flex-1 bg-slate-800/75 rounded-lg rounded-tl-none px-3.5 py-3 border border-emerald-500/25 space-y-2">
-        <div class="text-xs font-semibold text-emerald-400">
+      <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-[#00f5d4]/20 border-2 border-[#00f5d4] flex items-center justify-center text-sm">🦈</div>
+      <div class="flex-1 bg-[#1a1a2e] rounded-xl rounded-tl-none px-3.5 py-3 border-2 border-[#00f5d4] shadow-[4px_4px_0px_#00f5d4] space-y-2">
+        <div class="font-mono-code text-xs font-extrabold text-[#00f5d4]">
           🦈 VC is inspecting Slide ${slideNum} pixels &amp; cross-checking your Claim Ledger...
         </div>
-        <div class="h-2 bg-slate-700/80 rounded w-5/6"></div>
-        <div class="h-2 bg-slate-700/60 rounded w-3/5"></div>
+        <div class="h-2 bg-slate-700 rounded w-5/6"></div>
+        <div class="h-2 bg-slate-800 rounded w-3/5"></div>
       </div>`;
     feed.appendChild(skel);
     feed.scrollTop = feed.scrollHeight;
@@ -1480,8 +1817,11 @@
 
     // Reset UI
     document.getElementById('chatFeed').innerHTML = `
-      <div class="flex justify-center py-8">
-        <span class="text-xs text-slate-600 italic">Session reset. Upload a slide to start.</span>
+      <div class="flex justify-center py-10">
+        <div class="text-center max-w-sm p-4 rounded-xl border-2 border-dashed border-slate-700 bg-black/30">
+          <div class="text-2xl mb-1">🔄⚡</div>
+          <p class="text-xs font-bold text-slate-300">Arena reset! Click <span class="text-[#facc15]">"🔍 Pitch This Slide to VC"</span> to start a fresh round.</p>
+        </div>
       </div>`;
     updateTelemetry(
       {
@@ -1493,16 +1833,17 @@
       0
     );
     document.getElementById('visualClaimsList').innerHTML =
-      '<p class="italic text-slate-600">No claims extracted yet.</p>';
+      '<p class="italic text-slate-500">No claims extracted yet.</p>';
     document.getElementById('claimLedgerList').innerHTML =
-      '<p class="italic text-slate-600 py-4 text-center">Claims will appear here.</p>';
+      '<p class="italic text-slate-500 py-4 text-center">Claims will lock in here as you pitch slides.</p>';
     document.getElementById('verdictContent').classList.add('hidden');
     document.getElementById('skillContent').textContent =
       'SKILL.md will auto-update as you interrogate slides.';
     document.getElementById('simChipsContainer').classList.add('opacity-40', 'pointer-events-none');
-    document.getElementById('turnCount').textContent = 'Turn 0';
+    document.getElementById('turnCount').textContent = 'ROUND 0';
     lastSimStrong = '';
     lastSimEvasive = '';
+    updatePersonaBadge();
     fetchSkillPreview();
   }
 
@@ -1516,7 +1857,7 @@
     const slideNum = currentSlide + 1;
     const btn = document.getElementById('pitchSlideBtn');
     btn.disabled = true;
-    btn.innerHTML = `<span class="animate-pulse">🦈 Inspecting Slide ${slideNum}...</span>`;
+    btn.innerHTML = `<span class="animate-pulse">🦈 SCANNING SLIDE ${slideNum} PIXELS...</span>`;
 
     appendChat('founder', `[Pitched Slide ${slideNum} to the VC]`, 'pitch');
     showInterrogationSkeleton(slideNum);
@@ -1570,10 +1911,25 @@
   const sendDefense = sendFounderReply;
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Handle Interrogation Response
+  //  Handle Interrogation Response & Arcade Game-Show Moments
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function handleInterrogationResponse(data, isSlideUpload) {
     const session = data.session || {};
+    const evaluation = data.evaluation || data;
+
+    const contradictionDetected = Boolean(
+      evaluation.contradiction_detected ?? data.contradiction_detected
+    );
+    const evasionDetected = Boolean(
+      evaluation.evasion_detected ?? data.evasion_detected
+    );
+    const contradictionDetail =
+      evaluation.contradiction_detail ||
+      data.contradiction_detail ||
+      'Conflicting numerical or strategic claims detected across slides!';
+    const convictionDelta = Number(
+      evaluation.conviction_delta ?? data.conviction_delta ?? 0
+    );
 
     // Update Detected Industry & Business Model pills in Left Panel
     const detectedIndustry = data.detected_industry || session.detected_industry;
@@ -1592,61 +1948,63 @@
 
     // Determine attack_vector_badge
     const attackVectorBadge =
+      evaluation.attack_vector_badge ||
       data.attack_vector_badge ||
-      (data.contradiction_detected
+      (contradictionDetected
         ? '🎯 Cross-Slide Contradiction Audit'
-        : data.evasion_detected
+        : evasionDetected
           ? '🚨 Founder Evasion Callout'
           : isSlideUpload
             ? `🔍 ${businessModel || 'Unit Economics'} Stress-Test`
             : '⚡ Unit Economics & Moat Interrogation');
 
-    // Build VC card body with attack_vector_badge, crimson Contradiction Caught banner, and vc_spoken_response
+    // Build VC card body with attack_vector_badge, tilted comic slam badge, and vc_spoken_response
     let vcHtml = `
       <div class="mb-2 flex flex-wrap items-center gap-1.5">
-        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+        <span class="inline-flex items-center px-2 py-0.5 rounded font-mono-code text-[10px] font-extrabold uppercase tracking-wider bg-[#00f5d4]/15 text-[#00f5d4] border border-[#00f5d4]">
           ${escapeHtml(attackVectorBadge)}
         </span>
       </div>`;
 
-    if (data.contradiction_detected) {
-      const detail =
-        data.contradiction_detail ||
-        'Cross-slide numerical or strategic conflict detected against your Claim Ledger.';
+    if (contradictionDetected) {
+      triggerScreenShake();
+      updatePersonaBadge('ROAST MODE 🔥');
       vcHtml += `
-        <div class="contradiction-box mb-2.5 p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/40 text-xs text-rose-200">
-          <div class="font-extrabold text-rose-400 uppercase tracking-wide text-[11px] mb-0.5">
-            🚨 Contradiction Caught
+        <div class="contradiction-box -rotate-1 mb-3 p-3 rounded-xl text-xs text-white">
+          <div class="font-display font-extrabold text-[#ff2a85] uppercase tracking-wider text-xs mb-1">
+            🚨 CAUGHT IN 4K: CROSS-SLIDE CONTRADICTION!
           </div>
-          <div>${escapeHtml(detail)}</div>
+          <div class="font-medium text-rose-100">${escapeHtml(contradictionDetail)}</div>
         </div>`;
-    } else if (data.evasion_detected) {
+    } else if (evasionDetected) {
+      triggerScreenShake();
+      updatePersonaBadge('BS DETECTOR 🚨');
       vcHtml += `
-        <div class="contradiction-box mb-2.5 p-2 rounded-lg text-[11px] text-amber-200" style="border-left-color: #f59e0b; background: rgba(245,158,11,0.12);">
-          <span class="font-bold text-amber-400">🚨 EVASION DETECTED:</span> The VC flagged a non-answer or buzzword dodge.
+        <div class="contradiction-box -rotate-1 mb-3 p-3 rounded-xl text-xs text-white" style="border-color:#facc15; box-shadow:4px 4px 0px #facc15; background:rgba(250,204,21,0.14);">
+          <div class="font-display font-extrabold text-[#facc15] uppercase tracking-wider text-xs mb-1">
+            🤡 DODGE DETECTED: ANSWER THE QUESTION!
+          </div>
+          <div class="font-medium text-amber-100">The VC flagged an evasive buzzword dodge or non-answer.</div>
         </div>`;
+    } else {
+      updatePersonaBadge(convictionDelta > 0 ? 'IMPRESSED ⚡' : 'PROBING 🔍');
     }
 
-    vcHtml += `<div class="text-slate-100 leading-relaxed">${escapeHtml(data.vc_spoken_response || '')}</div>`;
+    vcHtml += `<div class="text-white font-medium leading-relaxed">${escapeHtml(data.vc_spoken_response || '')}</div>`;
 
-    // Persona badge
-    const personaNames = {
-      sand_hill_vc: '🦈 Sand Hill VC',
-      ruthless_cfo: '📊 CFO Auditor',
-      enterprise_buyer: '🏢 Enterprise Buyer',
-      demo_day_judge: '🏆 Demo Judge',
-    };
+    // Persona label & icon
     const personaKey = data.turn?.persona || document.getElementById('personaSelect').value;
-    const personaLabel = personaNames[personaKey] || '🦈 VC';
-    appendChat('vc', vcHtml, 'interrogation', personaLabel);
+    const meta = PERSONA_ARCADE_META[personaKey] || PERSONA_ARCADE_META.sand_hill_vc;
+    appendChat('vc', vcHtml, 'interrogation', meta.badge, meta.icon);
 
     // Speak VC response via Web Speech API TTS
     if (data.vc_spoken_response) {
       speakVCResponse(data.vc_spoken_response);
     }
 
-    // Animate Conviction Score, Delta Badge, Skepticism Heat, and Strikes
-    updateTelemetry(session, data.conviction_delta || 0);
+    // Animate Conviction Score, Floating Score Popup, Roast Heat, and Strikes
+    spawnFloatingScorePopup(convictionDelta);
+    updateTelemetry(session, convictionDelta);
 
     // Update Right Panel Cross-Slide Claim Ledger
     updateClaimLedger(session.claim_ledger || []);
@@ -1669,8 +2027,8 @@
     const simContainer = document.getElementById('simChipsContainer');
     simContainer.classList.remove('opacity-40', 'pointer-events-none');
 
-    // Turn count
-    document.getElementById('turnCount').textContent = `Turn ${session.history?.length || 0}`;
+    // Round count
+    document.getElementById('turnCount').textContent = `ROUND ${session.history?.length || 0}`;
 
     // Refresh #skillPreview tab via GET /api/skill
     fetchSkillPreview();
@@ -1679,7 +2037,7 @@
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  Chat Feed
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  function appendChat(role, content, type, label) {
+  function appendChat(role, content, type, label, avatarIcon) {
     const feed = document.getElementById('chatFeed');
     const empty = feed.querySelector('.justify-center');
     if (empty) empty.remove();
@@ -1689,13 +2047,13 @@
     if (role === 'vc') {
       bubble.className = 'flex gap-2.5 items-start';
       bubble.innerHTML = `
-        <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-sm">🦈</div>
+        <div class="flex-shrink-0 w-9 h-9 rounded-xl bg-[#1a1a2e] border-2 border-[#00f5d4] shadow-[2px_2px_0px_#00f5d4] flex items-center justify-center text-base">${avatarIcon || '🦈'}</div>
         <div class="flex-1">
           <div class="flex items-center gap-2 mb-1">
-            <span class="text-[10px] font-bold text-emerald-400 uppercase">${label}</span>
-            <span class="text-[10px] text-slate-600">${new Date().toLocaleTimeString()}</span>
+            <span class="font-display text-[11px] font-extrabold text-[#00f5d4] uppercase">${label || '🦈 Sand Hill Shark'}</span>
+            <span class="font-mono-code text-[10px] text-slate-500">${new Date().toLocaleTimeString()}</span>
           </div>
-          <div class="bg-slate-800/60 rounded-lg rounded-tl-none px-3 py-2.5 text-sm text-slate-200 leading-relaxed border border-slate-700/40">
+          <div class="bg-[#181828] rounded-xl rounded-tl-none px-3.5 py-3 text-sm text-slate-100 leading-relaxed border-2 border-[#2e2e48] shadow-[4px_4px_0px_#000]">
             ${content}
           </div>
         </div>`;
@@ -1704,17 +2062,17 @@
       bubble.innerHTML = `
         <div class="flex-1 text-right">
           <div class="flex items-center justify-end gap-2 mb-1">
-            <span class="text-[10px] text-slate-600">${new Date().toLocaleTimeString()}</span>
-            <span class="text-[10px] font-bold text-violet-400 uppercase">Founder</span>
+            <span class="font-mono-code text-[10px] text-slate-500">${new Date().toLocaleTimeString()}</span>
+            <span class="font-display text-[11px] font-extrabold text-[#facc15] uppercase">Founder Defense</span>
           </div>
-          <div class="bg-violet-500/10 rounded-lg rounded-tr-none px-3 py-2.5 text-sm text-slate-200 leading-relaxed border border-violet-500/15 text-left inline-block max-w-[90%]">
+          <div class="bg-[#a855f7]/15 rounded-xl rounded-tr-none px-3.5 py-2.5 text-sm text-white leading-relaxed border-2 border-[#a855f7] shadow-[3px_3px_0px_#a855f7] text-left inline-block max-w-[90%]">
             ${escapeHtml(content)}
           </div>
         </div>
-        <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-sm">👤</div>`;
+        <div class="flex-shrink-0 w-9 h-9 rounded-xl bg-[#a855f7]/20 border-2 border-[#a855f7] flex items-center justify-center text-base">🎙️</div>`;
     } else {
       bubble.className = 'text-center';
-      bubble.innerHTML = `<span class="text-xs text-slate-500 italic">${content}</span>`;
+      bubble.innerHTML = `<span class="font-mono-code text-xs text-[#ff2a85] font-bold">${content}</span>`;
     }
 
     feed.appendChild(bubble);
@@ -1722,58 +2080,58 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Telemetry Updates (Conviction Score, Delta, Skepticism Heat, Strikes)
+  //  Telemetry Updates (Conviction Score, Delta, Roast Heat, Strikes)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function updateTelemetry(session, delta) {
     const score = session.conviction_score ?? 50;
     const strikes = session.evasion_strikes ?? 0;
 
-    // Conviction Score & Progress Bar
+    // Conviction Score & Fighting-Game Hype Bar
     document.getElementById('convictionValue').textContent = score;
     const bar = document.getElementById('convictionBar');
     bar.style.width = score + '%';
 
     if (score >= 68) {
-      bar.className = 'conviction-bar h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400';
+      bar.className = 'conviction-bar h-full rounded-sm bg-gradient-to-r from-[#00f5d4] to-emerald-400';
     } else if (score >= 45) {
-      bar.className = 'conviction-bar h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400';
+      bar.className = 'conviction-bar h-full rounded-sm bg-gradient-to-r from-[#facc15] to-amber-400';
     } else {
-      bar.className = 'conviction-bar h-full rounded-full bg-gradient-to-r from-rose-500 to-rose-400';
+      bar.className = 'conviction-bar h-full rounded-sm bg-gradient-to-r from-[#ff2a85] to-rose-500';
     }
 
-    // +Δ (emerald) or -Δ (rose) Delta Badge
+    // +Δ (mint) or -Δ (pink) Delta Badge
     const deltaEl = document.getElementById('convictionDelta');
     const sign = delta > 0 ? '+' : '';
-    deltaEl.textContent = `${sign}${delta}`;
+    deltaEl.textContent = delta > 0 ? `${sign}${delta} 🔥` : delta < 0 ? `${delta} 💀` : '+0';
     if (delta > 0) {
-      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25';
+      deltaEl.className = 'font-mono-code px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#00f5d4]/20 text-[#00f5d4] border border-[#00f5d4]';
     } else if (delta < 0) {
-      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/25';
+      deltaEl.className = 'font-mono-code px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#ff2a85]/20 text-[#ff2a85] border border-[#ff2a85]';
     } else {
-      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-500';
+      deltaEl.className = 'font-mono-code px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-black text-slate-400 border border-slate-700';
     }
 
-    // Skepticism Heat
+    // Roast Heat Badge
     const badge = document.getElementById('skepticismBadge');
     if (strikes >= 3 || score < 35) {
-      badge.textContent = '🔥 HOSTILE DILIGENCE';
-      badge.className = 'inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/20 mt-1 animate-pulse';
+      badge.textContent = '🔥 HOSTILE ROAST';
+      badge.className = 'inline-block px-2.5 py-1 rounded-md font-mono-code text-[11px] font-extrabold bg-[#ff2a85]/20 text-[#ff2a85] border-2 border-[#ff2a85] animate-pulse';
     } else if (strikes >= 1 || score < 50) {
-      badge.textContent = '⚡ HIGH SKEPTICISM';
-      badge.className = 'inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20 mt-1';
+      badge.textContent = '⚡ HIGH HEAT';
+      badge.className = 'inline-block px-2.5 py-1 rounded-md font-mono-code text-[11px] font-extrabold bg-[#facc15]/20 text-[#facc15] border-2 border-[#facc15]';
     } else {
       badge.textContent = '🔍 PROBING';
-      badge.className = 'inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 mt-1';
+      badge.className = 'inline-block px-2.5 py-1 rounded-md font-mono-code text-[11px] font-extrabold bg-[#00f5d4]/15 text-[#00f5d4] border-2 border-[#00f5d4]';
     }
 
-    // Strike Dots
+    // 3-Strike Boxes
     document.getElementById('strikesValue').textContent = strikes;
     for (let i = 1; i <= 3; i++) {
       const dot = document.getElementById('strike' + i);
       if (i <= strikes) {
-        dot.className = 'w-3 h-3 rounded-full bg-rose-500 border border-rose-400 shadow-sm shadow-rose-500/50';
+        dot.className = 'w-4 h-4 rounded bg-[#ff2a85] border-2 border-white shadow-[2px_2px_0px_#000]';
       } else {
-        dot.className = 'w-3 h-3 rounded-full bg-slate-700 border border-slate-600';
+        dot.className = 'w-4 h-4 rounded bg-black border-2 border-slate-600';
       }
     }
 
@@ -1794,9 +2152,9 @@
     el.innerHTML = claims
       .map(
         (c, i) => `
-      <div class="flex items-start gap-2 p-2 rounded-lg bg-slate-800/40 border border-slate-700/30">
-        <span class="flex-shrink-0 w-5 h-5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold flex items-center justify-center">${i + 1}</span>
-        <span class="text-slate-300 text-[11px] leading-relaxed">${escapeHtml(c)}</span>
+      <div class="flex items-start gap-2 p-2 rounded-lg bg-black/50 border border-[#00f5d4]/40">
+        <span class="flex-shrink-0 w-5 h-5 rounded bg-[#00f5d4] text-black font-mono-code text-[10px] font-extrabold flex items-center justify-center">${i + 1}</span>
+        <span class="text-slate-200 text-[11px] font-medium leading-relaxed">${escapeHtml(c)}</span>
       </div>
     `
       )
@@ -1806,20 +2164,20 @@
   function updateClaimLedger(ledger) {
     const el = document.getElementById('claimLedgerList');
     if (!ledger.length) {
-      el.innerHTML = '<p class="italic text-slate-600 py-4 text-center">Claims will appear here.</p>';
+      el.innerHTML = '<p class="italic text-slate-500 py-4 text-center">Claims will lock in here as you pitch slides.</p>';
       return;
     }
     el.innerHTML = ledger
       .map((c) => {
         const sourceColor =
           c.source === 'Visual Slide'
-            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
-            : 'bg-violet-500/15 text-violet-400 border-violet-500/20';
+            ? 'bg-[#00f5d4]/15 text-[#00f5d4] border-[#00f5d4]'
+            : 'bg-[#a855f7]/20 text-[#a855f7] border-[#a855f7]';
         return `
-        <div class="flex items-start gap-1.5 p-1.5 rounded bg-slate-800/30">
-          <span class="flex-shrink-0 px-1 py-0.5 rounded text-[9px] font-bold bg-slate-700 text-slate-400">S${c.slide}</span>
-          <span class="flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${sourceColor}">${c.source === 'Visual Slide' ? '👁' : '🗣'}</span>
-          <span class="text-[11px] text-slate-400 leading-snug">${escapeHtml(c.claim)}</span>
+        <div class="flex items-start gap-1.5 p-2 rounded-lg bg-black/40 border border-slate-800">
+          <span class="flex-shrink-0 px-1.5 py-0.5 rounded font-mono-code text-[9px] font-extrabold bg-[#facc15] text-black">S${c.slide}</span>
+          <span class="flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold border ${sourceColor}">${c.source === 'Visual Slide' ? '👁' : '🗣'}</span>
+          <span class="text-[11px] text-slate-300 leading-snug">${escapeHtml(c.claim)}</span>
         </div>`;
       })
       .join('');
@@ -1827,34 +2185,50 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  1-Click Judge Simulation Chips (Populate #userInput & Auto-Submit)
+  //  1-Click Judge Simulation Chips (useSimReply / simulateReply)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  function simulateReply(type) {
+  function useSimReply(type) {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    const msg = type === 'strong' ? lastSimStrong : lastSimEvasive;
-    if (!msg || msg === 'N/A') return;
+    const fallbackStrong =
+      'Our cohort data across 1,400 active users shows an audited CAC of $18 with a 4.2-month payback period, and we are standardizing Slide 2 to reflect net contribution margins after channel fees.';
+    const fallbackEvasive =
+      'We are leveraging our proprietary AI flywheel and hyper-viral community synergies to transcend traditional unit economics.';
+
+    const msg =
+      type === 'strong'
+        ? (lastSimStrong && lastSimStrong !== 'N/A' ? lastSimStrong : fallbackStrong)
+        : (lastSimEvasive && lastSimEvasive !== 'N/A' ? lastSimEvasive : fallbackEvasive);
+
     const input = document.getElementById('userInput');
     input.value = msg;
     sendFounderReply();
   }
 
+  // Backward-compatible alias
+  const simulateReply = useSimReply;
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  3. Final Investment Committee Verdict & Term Sheet (generateVerdict)
+  //  3. Final Investment Committee Verdict & Rubber Stamp (generateVerdict)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function generateVerdict() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
 
-    // Switch Right Panel to Tab 1 (VC Verdict Memo)
+    // Switch Right Panel to Tab 1 (IC Verdict)
     switchTab('verdict');
 
     const btn = document.getElementById('generateVerdictBtn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="animate-pulse">⏳ Generating IC Verdict &amp; Term Sheet...</span>';
+    btn.innerHTML = '<span class="animate-pulse">⏳ DROPPING IC VERDICT...</span>';
 
     try {
       const fd = new FormData();
       fd.append('provider', document.getElementById('providerSelect').value);
       fd.append('api_key', document.getElementById('apiKeyInput').value);
+
+      const ollamaModelEl = document.getElementById('ollamaModelInput');
+      if (ollamaModelEl && ollamaModelEl.value.trim()) {
+        fd.append('ollama_model', ollamaModelEl.value.trim());
+      }
 
       const resp = await fetch('/api/verdict', { method: 'POST', body: fd });
       const data = await resp.json();
@@ -1862,21 +2236,28 @@
       const content = document.getElementById('verdictContent');
       content.classList.remove('hidden');
 
-      // Decision badge (TERM SHEET OFFERED / CONDITIONAL SECOND MEETING / HARD PASS)
+      // Giant Rotated Rubber-Stamp Badge + Confetti Effect
       const decBox = document.getElementById('verdictDecisionBox');
+      const stampLabel = document.getElementById('verdictStampLabel');
       const dec = data.decision || 'HARD PASS';
+
       document.getElementById('verdictDecision').textContent = dec;
       document.getElementById('verdictHeadline').textContent = data.headline_offer_or_reason || '';
 
       if (dec === 'TERM SHEET OFFERED') {
-        decBox.className = 'text-center py-3 px-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10';
-        document.getElementById('verdictDecision').className = 'text-sm font-black text-emerald-400';
+        if (stampLabel) stampLabel.textContent = '💸 FUNDED: TERM SHEET DROPPED';
+        decBox.className = 'rubber-stamp text-center py-3.5 px-3 rounded-xl brutal-mint bg-[#00f5d4]/15 text-[#00f5d4]';
+        document.getElementById('verdictDecision').className = 'font-display text-base font-extrabold text-[#00f5d4]';
+        triggerConfettiBurst();
       } else if (dec === 'CONDITIONAL SECOND MEETING') {
-        decBox.className = 'text-center py-3 px-2 rounded-lg border border-amber-500/30 bg-amber-500/10';
-        document.getElementById('verdictDecision').className = 'text-sm font-black text-amber-400';
+        if (stampLabel) stampLabel.textContent = '⚠️ AUDIT REQUIRED: 2ND MEETING';
+        decBox.className = 'rubber-stamp text-center py-3.5 px-3 rounded-xl brutal-yellow bg-[#facc15]/15 text-[#facc15]';
+        document.getElementById('verdictDecision').className = 'font-display text-base font-extrabold text-[#facc15]';
       } else {
-        decBox.className = 'text-center py-3 px-2 rounded-lg border border-rose-500/30 bg-rose-500/10';
-        document.getElementById('verdictDecision').className = 'text-sm font-black text-rose-400';
+        if (stampLabel) stampLabel.textContent = '💀 ROASTED: HARD PASS';
+        decBox.className = 'rubber-stamp text-center py-3.5 px-3 rounded-xl brutal-pink bg-[#ff2a85]/15 text-[#ff2a85]';
+        document.getElementById('verdictDecision').className = 'font-display text-base font-extrabold text-[#ff2a85]';
+        triggerScreenShake();
       }
 
       // 4 Score Progress Bars
@@ -1898,7 +2279,7 @@
       appendChat('system', `⚠️ Verdict error: ${e.message}`, 'error');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '⚖️ Generate Final VC Verdict & Term Sheet';
+      btn.innerHTML = '⚖️ Generate Final VC Verdict &amp; Term Sheet';
     }
   }
 
@@ -1962,7 +2343,7 @@
   const downloadSkillMd = downloadSkill;
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  Tab Switching (Tab 1: Verdict Memo / Tab 2: Self-Improving SKILL.md)
+  //  Tab Switching (Tab 1: IC Verdict / Tab 2: Self-Improving SKILL.md)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function switchTab(tab) {
     const tabVerdict = document.getElementById('tabVerdict');
@@ -1971,13 +2352,13 @@
     const skillPanel = document.getElementById('skillPanel');
 
     if (tab === 'verdict') {
-      tabVerdict.className = 'flex-1 px-3 py-2.5 text-xs font-semibold tab-active transition-colors';
-      tabSkill.className = 'flex-1 px-3 py-2.5 text-xs font-semibold tab-inactive transition-colors';
+      tabVerdict.className = 'flex-1 px-3 py-2.5 font-display text-xs font-extrabold uppercase tracking-wide tab-active transition-colors';
+      tabSkill.className = 'flex-1 px-3 py-2.5 font-display text-xs font-extrabold uppercase tracking-wide tab-inactive transition-colors';
       verdictPanel.classList.remove('hidden');
       skillPanel.classList.add('hidden');
     } else {
-      tabSkill.className = 'flex-1 px-3 py-2.5 text-xs font-semibold tab-active transition-colors';
-      tabVerdict.className = 'flex-1 px-3 py-2.5 text-xs font-semibold tab-inactive transition-colors';
+      tabSkill.className = 'flex-1 px-3 py-2.5 font-display text-xs font-extrabold uppercase tracking-wide tab-active transition-colors';
+      tabVerdict.className = 'flex-1 px-3 py-2.5 font-display text-xs font-extrabold uppercase tracking-wide tab-inactive transition-colors';
       skillPanel.classList.remove('hidden');
       verdictPanel.classList.add('hidden');
       fetchSkillPreview();
@@ -1992,10 +2373,10 @@
     const btn = document.getElementById('ttsToggleBtn');
     if (ttsEnabled) {
       btn.innerHTML = '🔊 Voice ON';
-      btn.classList.remove('bg-slate-700');
+      btn.classList.remove('opacity-60');
     } else {
       btn.innerHTML = '🔇 Muted';
-      btn.classList.add('bg-slate-700');
+      btn.classList.add('opacity-60');
       if (window.speechSynthesis) window.speechSynthesis.cancel();
     }
   }
@@ -2098,6 +2479,8 @@
   //  Init — On page load, load fintech deck & fetch /api/skill
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function initializeApp() {
+    toggleProviderModelInput();
+    updatePersonaBadge();
     loadSampleDeck('fintech');
     fetchSkillPreview();
     if (window.speechSynthesis && window.speechSynthesis.getVoices) {
