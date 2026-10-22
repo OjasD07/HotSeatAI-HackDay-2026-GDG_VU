@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hotseat-ai
+    runtime: python
+    plan: free
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}
+    healthCheckPath: /api/state
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMMA_MODEL_ID
+        value: gemma-4-26b-a4b-it
