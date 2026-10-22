@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HotSeat AI — Universal VC Pitch Interrogator & Contradiction Engine</title>
+  <meta name="description" content="Industry-agnostic multimodal VC pitch-deck interrogator, cross-slide contradiction detector, and self-improving Agent Skill compiler powered by Gemma 4." />
+
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4,0,0.6,1) infinite',
+            'glow': 'glow 2s ease-in-out infinite alternate',
+          },
+          keyframes: {
+            glow: {
+              '0%':   { boxShadow: '0 0 5px rgba(16,185,129,0.3)' },
+              '100%': { boxShadow: '0 0 20px rgba(16,185,129,0.6)' },
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #020617; }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    /* Slide canvas container */
+    .slide-viewport { aspect-ratio: 5/3; background: #0f172a; border-radius: 0.5rem; overflow: hidden; }
+    /* Pulsing mic */
+    @keyframes mic-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+      50% { box-shadow: 0 0 0 12px rgba(239,68,68,0); }
+    }
+    .mic-recording { animation: mic-pulse 1.2s ease-in-out infinite; background: #ef4444 !important; }
+    /* Conviction bar animation */
+    .conviction-bar { transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1); }
+    /* Score bar animation */
+    .score-bar { transition: width 1s ease-out; }
+    /* Card hover glow */
+    .card-glow:hover { box-shadow: 0 0 30px rgba(16,185,129,0.08); }
+    /* Tab active */
+    .tab-active { border-bottom: 2px solid #10b981; color: #10b981; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #94a3b8; }
+    .tab-inactive:hover { color: #cbd5e1; }
+    /* Contradiction callout */
+    .contradiction-box { border-left: 3px solid #f43f5e; background: rgba(244,63,94,0.08); }
+    /* Chip buttons */
+    .sim-chip { transition: all 0.2s; }
+    .sim-chip:hover { transform: translateY(-1px); }
+    /* Hide file input */
+    .file-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STICKY TOP NAVIGATION BAR
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <nav class="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/60">
+    <div class="max-w-[1650px] mx-auto px-4 py-2.5 flex flex-wrap items-center gap-3">
+
+      <!-- Brand -->
+      <div class="flex items-center gap-2.5 mr-2">
+        <span class="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-bold tracking-wider uppercase border border-emerald-500/20">Gemma 4 Multimodal</span>
+        <h1 class="text-lg font-extrabold tracking-tight text-white">HotSeat<span class="text-emerald-400">AI</span></h1>
+        <span class="hidden sm:inline text-[11px] text-slate-500 max-w-[200px] leading-tight">Universal VC Pitch Interrogator & Contradiction Engine</span>
+      </div>
+
+      <div class="flex-1"></div>
+
+      <!-- Persona Selector -->
+      <select id="personaSelect" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer">
+        <option value="sand_hill_vc">🦈 Sand Hill Tier-1 VC</option>
+        <option value="ruthless_cfo">📊 Ruthless PE / CFO Auditor</option>
+        <option value="enterprise_buyer">🏢 Skeptical Enterprise Buyer</option>
+        <option value="demo_day_judge">🏆 Hackathon Demo-Day Judge</option>
+      </select>
+
+      <!-- Engine Selector -->
+      <select id="providerSelect" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer">
+        <option value="gemini_api">☁️ Gemini API: Gemma 4 (gemma-4-26b-a4b-it)</option>
+        <option value="ollama">💻 Local Ollama: Gemma 4 (Open-Weight)</option>
+      </select>
+
+      <!-- API Key -->
+      <input id="apiKeyInput" type="password" placeholder="Optional: Gemini API Key override"
+        class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-2.5 py-1.5 w-48 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 placeholder:text-slate-600" />
+
+      <!-- Voice TTS Toggle -->
+      <button id="ttsToggleBtn" onclick="toggleTTS()"
+        class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">
+        🔊 Voice ON
+      </button>
+
+      <!-- Reset -->
+      <button id="resetBtn" onclick="resetSession()"
+        class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/25 hover:bg-rose-500/25 transition-colors">
+        ↺ Reset Session
+      </button>
+    </div>
+  </nav>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MAIN 12-COLUMN GRID
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <main class="max-w-[1650px] mx-auto p-4 grid grid-cols-12 gap-4" style="min-height: calc(100vh - 56px);">
+
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         LEFT PANEL — Pitch Stage & Visual Claim Extractor (4 cols)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <section class="col-span-12 lg:col-span-4 flex flex-col gap-3">
+
+      <!-- Sample Deck Buttons -->
+      <div class="flex gap-2">
+        <button onclick="loadSampleDeck('fintech')"
+          class="flex-1 px-2.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-700/60 hover:border-emerald-500/40 hover:bg-slate-800 transition-all text-slate-300">
+          🏦 FinTech Deck<span class="block text-[10px] text-slate-500">(3 Slides)</span>
+        </button>
+        <button onclick="loadSampleDeck('medtech')"
+          class="flex-1 px-2.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-700/60 hover:border-violet-500/40 hover:bg-slate-800 transition-all text-slate-300">
+          🧬 MedTech Deck<span class="block text-[10px] text-slate-500">(3 Slides)</span>
+        </button>
+        <button onclick="loadSampleDeck('d2c')"
+          class="flex-1 px-2.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-700/60 hover:border-amber-500/40 hover:bg-slate-800 transition-all text-slate-300">
+          🥤 D2C Retail Deck<span class="block text-[10px] text-slate-500">(3 Slides)</span>
+        </button>
+      </div>
+
+      <!-- Slide Viewport -->
+      <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-2 card-glow">
+        <div class="slide-viewport flex items-center justify-center relative">
+          <canvas id="slideCanvas" width="800" height="480" class="w-full h-full object-contain rounded-lg"></canvas>
+          <div id="slideEmptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600">
+            <svg class="w-12 h-12 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+            <span class="text-xs">Upload a deck or choose a sample</span>
+          </div>
+        </div>
+
+        <!-- File Upload -->
+        <input type="file" id="fileInput" accept=".pdf,image/*" multiple class="file-hidden" onchange="handleFileUpload(event)" />
+        <button onclick="document.getElementById('fileInput').click()"
+          class="w-full mt-2 px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700/60 hover:bg-slate-700 transition-colors text-slate-400">
+          📄 Upload PDF Deck or Slide Images
+        </button>
+
+        <!-- Slide Navigation -->
+        <div class="flex items-center gap-2 mt-2">
+          <button onclick="prevSlide()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">◀ Prev</button>
+          <span id="slideIndicator" class="flex-1 text-center text-xs text-slate-500">Slide 0 of 0</span>
+          <button onclick="nextSlide()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors">Next ▶</button>
+        </div>
+        <button id="pitchSlideBtn" onclick="pitchCurrentSlide()"
+          class="w-full mt-2 px-3 py-2.5 rounded-lg text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98]">
+          🔍 Pitch This Slide to VC
+        </button>
+      </div>
+
+      <!-- Gemma 4 Vision Extraction Card -->
+      <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-4 card-glow">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">👁️ Gemma 4 Vision Extraction</h3>
+        <div class="flex gap-2 mb-3 flex-wrap">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-slate-500 uppercase">Industry</span>
+            <span id="industryPill" class="px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-400 text-[11px] font-semibold border border-violet-500/20">Detecting...</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-slate-500 uppercase">Model</span>
+            <span id="bizModelPill" class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[11px] font-semibold border border-amber-500/20">Analyzing...</span>
+          </div>
+        </div>
+        <div id="visualClaimsList" class="space-y-1.5 text-xs text-slate-400">
+          <p class="italic text-slate-600">No claims extracted yet. Pitch a slide to begin.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         CENTER PANEL — Live HotSeat Interrogation Arena (5 cols)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <section class="col-span-12 lg:col-span-5 flex flex-col gap-3">
+
+      <!-- 3 Telemetry Cards -->
+      <div class="grid grid-cols-3 gap-2">
+        <!-- Conviction Score -->
+        <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-3 card-glow">
+          <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">VC Conviction</div>
+          <div class="flex items-end gap-1.5">
+            <span id="convictionValue" class="text-2xl font-black text-emerald-400 leading-none">50</span>
+            <span class="text-xs text-slate-500">/100</span>
+            <span id="convictionDelta" class="ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-500">+0</span>
+          </div>
+          <div class="mt-2 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="convictionBar" class="conviction-bar h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style="width:50%"></div>
+          </div>
+        </div>
+
+        <!-- Skepticism Heat -->
+        <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-3 card-glow">
+          <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Skepticism Heat</div>
+          <span id="skepticismBadge" class="inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20 mt-1">
+            PROBING
+          </span>
+        </div>
+
+        <!-- Strikes -->
+        <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-3 card-glow">
+          <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Contradiction Strikes</div>
+          <div class="flex items-end gap-1">
+            <span id="strikesValue" class="text-2xl font-black text-rose-400 leading-none">0</span>
+            <span class="text-xs text-slate-500">/ 3 Strikes</span>
+          </div>
+          <div class="flex gap-1 mt-2">
+            <span id="strike1" class="w-3 h-3 rounded-full bg-slate-700 border border-slate-600"></span>
+            <span id="strike2" class="w-3 h-3 rounded-full bg-slate-700 border border-slate-600"></span>
+            <span id="strike3" class="w-3 h-3 rounded-full bg-slate-700 border border-slate-600"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable Interrogation Feed -->
+      <div class="flex-1 bg-slate-900 rounded-xl border border-slate-800/60 flex flex-col overflow-hidden card-glow" style="min-height: 380px;">
+        <div class="px-4 py-2.5 border-b border-slate-800/60 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Live Interrogation Feed</span>
+          <span id="turnCount" class="ml-auto text-[10px] text-slate-600">Turn 0</span>
+        </div>
+        <div id="chatFeed" class="flex-1 overflow-y-auto p-4 space-y-3">
+          <div class="flex justify-center py-8">
+            <span class="text-xs text-slate-600 italic">Upload a pitch deck slide and click "Pitch This Slide to VC" to start the interrogation.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulation Chips -->
+      <div id="simChipsContainer" class="flex gap-2 opacity-40 pointer-events-none transition-opacity">
+        <button id="simStrongBtn" onclick="simulateReply('strong')"
+          class="sim-chip flex-1 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">
+          💪 Simulate Strong Data-Backed Reply
+        </button>
+        <button id="simEvasiveBtn" onclick="simulateReply('evasive')"
+          class="sim-chip flex-1 px-3 py-2 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">
+          🤡 Simulate Evasive Buzzword Dodge
+        </button>
+      </div>
+
+      <!-- Input Dock -->
+      <div class="bg-slate-900 rounded-xl border border-slate-800/60 p-3 flex items-end gap-2 card-glow">
+        <button id="micBtn" onclick="toggleMic()"
+          class="flex-shrink-0 w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-lg hover:bg-slate-700 transition-all"
+          title="Push to Talk">
+          🎙️
+        </button>
+        <textarea id="userInput" rows="2"
+          placeholder="Speak via mic or type your defense to the VC..."
+          class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 resize-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 placeholder:text-slate-600"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDefense()}"></textarea>
+        <button id="sendBtn" onclick="sendDefense()"
+          class="flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.97]">
+          Send Defense ↵
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         RIGHT PANEL — Claim Ledger, Verdict & SKILL.md (3 cols)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <section class="col-span-12 lg:col-span-3 flex flex-col gap-3">
+
+      <!-- Live Cross-Slide Claim Ledger -->
+      <div class="bg-slate-900 rounded-xl border border-slate-800/60 flex flex-col card-glow" style="max-height: 320px;">
+        <div class="px-4 py-2.5 border-b border-slate-800/60">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">📋 Cross-Slide Claim Ledger</h3>
+        </div>
+        <div id="claimLedgerList" class="flex-1 overflow-y-auto p-3 space-y-1.5 text-xs">
+          <p class="italic text-slate-600 py-4 text-center">Claims will appear here as you pitch slides.</p>
+        </div>
+      </div>
+
+      <!-- Verdict / SKILL.md Tabs -->
+      <div class="flex-1 bg-slate-900 rounded-xl border border-slate-800/60 flex flex-col overflow-hidden card-glow">
+        <!-- Tab Headers -->
+        <div class="flex border-b border-slate-800/60">
+          <button id="tabVerdict" onclick="switchTab('verdict')"
+            class="flex-1 px-3 py-2.5 text-xs font-semibold tab-active transition-colors">
+            📜 VC Verdict Memo
+          </button>
+          <button id="tabSkill" onclick="switchTab('skill')"
+            class="flex-1 px-3 py-2.5 text-xs font-semibold tab-inactive transition-colors">
+            🧠 Self-Improving SKILL.md
+          </button>
+        </div>
+
+        <!-- Tab 1: Verdict -->
+        <div id="verdictPanel" class="flex-1 overflow-y-auto p-4 space-y-3">
+          <button id="generateVerdictBtn" onclick="generateVerdict()"
+            class="w-full px-3 py-2.5 rounded-lg text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white transition-all hover:shadow-lg hover:shadow-violet-500/20 active:scale-[0.98]">
+            ⚖️ Generate Final VC Verdict & Term Sheet
+          </button>
+
+          <div id="verdictContent" class="space-y-3 hidden">
+            <!-- Decision Badge -->
+            <div id="verdictDecisionBox" class="text-center py-3 rounded-lg border">
+              <div id="verdictDecision" class="text-sm font-black"></div>
+              <div id="verdictHeadline" class="text-[11px] text-slate-400 mt-1"></div>
+            </div>
+
+            <!-- 4 Score Bars -->
+            <div class="space-y-2">
+              <div>
+                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Market Timing</span><span id="scoreMarket" class="text-emerald-400 font-bold">0</span></div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="barMarket" class="score-bar h-full rounded-full bg-emerald-500" style="width:0%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Unit Economics</span><span id="scoreEcon" class="text-amber-400 font-bold">0</span></div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="barEcon" class="score-bar h-full rounded-full bg-amber-500" style="width:0%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Defensibility Moat</span><span id="scoreMoat" class="text-violet-400 font-bold">0</span></div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="barMoat" class="score-bar h-full rounded-full bg-violet-500" style="width:0%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-500">Founder Conviction</span><span id="scoreFounder" class="text-rose-400 font-bold">0</span></div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="barFounder" class="score-bar h-full rounded-full bg-rose-500" style="width:0%"></div></div>
+              </div>
+            </div>
+
+            <!-- Strength & Flaw -->
+            <div class="space-y-2">
+              <div class="p-2.5 rounded-lg bg-emerald-500/8 border border-emerald-500/15">
+                <div class="text-[10px] text-emerald-500 uppercase font-bold mb-0.5">💎 Biggest Strength</div>
+                <p id="verdictStrength" class="text-[11px] text-slate-300"></p>
+              </div>
+              <div class="p-2.5 rounded-lg bg-rose-500/8 border border-rose-500/15">
+                <div class="text-[10px] text-rose-500 uppercase font-bold mb-0.5">💀 Fatal Flaw</div>
+                <p id="verdictFlaw" class="text-[11px] text-slate-300"></p>
+              </div>
+            </div>
+
+            <!-- Deck Fixes -->
+            <div>
+              <div class="text-[10px] text-slate-500 uppercase font-bold mb-1.5">🔧 Mandatory Deck Fixes</div>
+              <ol id="verdictFixes" class="space-y-1 text-[11px] text-slate-400 list-decimal list-inside"></ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: SKILL.md -->
+        <div id="skillPanel" class="flex-1 overflow-y-auto p-4 hidden">
+          <button onclick="downloadSkillMd()"
+            class="w-full mb-3 px-3 py-2 rounded-lg text-xs font-bold bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all">
+            ⬇ Download SKILL.md
+          </button>
+          <pre id="skillContent" class="text-[11px] text-slate-400 whitespace-pre-wrap font-mono leading-relaxed">SKILL.md will auto-update as you interrogate slides.</pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       JAVASCRIPT — Full Application Logic
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <script>
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  State
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  let slides = [];           // Array of { type: 'image'|'canvas', data: Blob|ImageData, label: '' }
+  let currentSlide = 0;
+  let ttsEnabled = true;
+  let isRecording = false;
+  let recognition = null;
+  let lastSimStrong = '';
+  let lastSimEvasive = '';
+  let lastSkillMd = '';
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Sample Deck Generator — renders synthetic slides on canvas
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const SAMPLE_DECKS = {
+    fintech: [
+      { title: 'PayBridge — FinTech Pitch', subtitle: 'Cross-Border SME Payments', color: '#0ea5e9',
+        metrics: ['TAM: $4.2T Global SME Payments', 'SAM: $380B APAC Corridor', 'MRR: $1.2M (Growing 28% MoM)', 'CAC: $42 | LTV: $1,860 (44x)'] },
+      { title: 'Unit Economics & Traction', subtitle: 'Series A Metrics', color: '#0ea5e9',
+        metrics: ['Gross Margin: 72%', 'Net Revenue Retention: 138%', 'Active Merchants: 18,400', 'Avg. Ticket Size: $2,300'] },
+      { title: 'Go-To-Market & The Ask', subtitle: 'Raising $12M Series A', color: '#0ea5e9',
+        metrics: ['Pre-Money Valuation: $48M', 'Target: 50K merchants by Q4 2027', 'Runway: 22 months post-raise', 'Team: 38 people across 3 offices'] },
+    ],
+    medtech: [
+      { title: 'NeuroScan AI — MedTech Pitch', subtitle: 'Early Alzheimer Detection via Retinal Imaging', color: '#a855f7',
+        metrics: ['TAM: $28B Alzheimer Diagnostics', 'Accuracy: 94.2% (vs 78% standard)', 'FDA 510(k) Submitted — Decision Q1 2027', 'IP: 3 Granted Patents, 2 Pending'] },
+      { title: 'Clinical Validation & Pipeline', subtitle: 'Multi-Site Trial Results', color: '#a855f7',
+        metrics: ['Trial Sites: 12 Hospitals', 'Patients Screened: 4,200', 'Sensitivity: 96.1% | Specificity: 91.8%', 'Time to Result: 4 min vs 45 min (MRI)'] },
+      { title: 'Business Model & Fundraise', subtitle: 'Raising $18M Series B', color: '#a855f7',
+        metrics: ['Revenue Model: SaaS + Per-Scan Fee', 'ARR: $3.1M (hospitals on contract)', 'Gross Margin: 84%', 'Burn Rate: $680K/month'] },
+    ],
+    d2c: [
+      { title: 'GreenBrew — D2C Retail Pitch', subtitle: 'Plant-Based Protein Beverages', color: '#f59e0b',
+        metrics: ['TAM: $14.5B Plant Protein Drinks', 'SKUs: 8 Flavors in 3 Formats', 'Monthly Orders: 42,000', 'Avg Order Value: ₹680 ($8.20)'] },
+      { title: 'Unit Economics & Channels', subtitle: 'D2C + Quick Commerce Hybrid', color: '#f59e0b',
+        metrics: ['Gross Margin: 58% (D2C) / 34% (Q-Com)', 'CAC: ₹320 (D2C) / ₹85 (Q-Com)', 'Repeat Rate: 3.2x in 90 days', 'Channel Mix: 60% D2C, 30% Q-Com, 10% Retail'] },
+      { title: 'Growth Plan & The Ask', subtitle: 'Raising ₹35 Cr Seed Round', color: '#f59e0b',
+        metrics: ['Pre-Money: ₹120 Cr', 'Target: 200K monthly orders by Dec 2027', 'Dark Kitchen Expansion: 8 cities', 'Team: 22 people, 3 co-founders'] },
+    ],
+  };
+
+  function loadSampleDeck(deckKey) {
+    const deck = SAMPLE_DECKS[deckKey];
+    if (!deck) return;
+    slides = [];
+    deck.forEach((slide, idx) => {
+      slides.push({ type: 'sample', data: slide, label: `Slide ${idx + 1}` });
+    });
+    currentSlide = 0;
+    renderCurrentSlide();
+    document.getElementById('slideEmptyState').classList.add('hidden');
+  }
+
+  function renderSampleSlide(slide) {
+    const canvas = document.getElementById('slideCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 800; canvas.height = 480;
+
+    // Background gradient
+    const bg = ctx.createLinearGradient(0, 0, 800, 480);
+    bg.addColorStop(0, '#0f172a');
+    bg.addColorStop(1, '#1e293b');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 800, 480);
+
+    // Accent bar
+    ctx.fillStyle = slide.color;
+    ctx.fillRect(0, 0, 6, 480);
+
+    // Top accent line
+    const grad = ctx.createLinearGradient(0, 0, 800, 0);
+    grad.addColorStop(0, slide.color);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 800, 2);
+
+    // Title
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 28px Inter, system-ui, sans-serif';
+    ctx.fillText(slide.title, 40, 65);
+
+    // Subtitle
+    ctx.fillStyle = slide.color;
+    ctx.font = '500 16px Inter, system-ui, sans-serif';
+    ctx.fillText(slide.subtitle, 40, 95);
+
+    // Divider
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(40, 115, 720, 1);
+
+    // Metrics cards
+    slide.metrics.forEach((metric, i) => {
+      const y = 140 + i * 78;
+      // Card bg
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+      ctx.beginPath();
+      ctx.roundRect(40, y, 720, 62, 8);
+      ctx.fill();
+      // Card left accent
+      ctx.fillStyle = slide.color + '40';
+      ctx.beginPath();
+      ctx.roundRect(40, y, 4, 62, [8, 0, 0, 8]);
+      ctx.fill();
+      // Metric text
+      const parts = metric.split(': ');
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 13px Inter, system-ui, sans-serif';
+      ctx.fillText(parts[0], 60, y + 26);
+      ctx.fillStyle = '#f1f5f9';
+      ctx.font = 'bold 20px Inter, system-ui, sans-serif';
+      ctx.fillText(parts[1] || '', 60, y + 50);
+    });
+
+    // Branding
+    ctx.fillStyle = '#475569';
+    ctx.font = '500 10px Inter, system-ui, sans-serif';
+    ctx.fillText('HotSeat AI — Sample Pitch Deck', 40, 468);
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  File Upload — PDF & Image handling
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function handleFileUpload(event) {
+    const files = event.target.files;
+    if (!files.length) return;
+    slides = [];
+
+    for (const file of files) {
+      if (file.type === 'application/pdf') {
+        await loadPDF(file);
+      } else if (file.type.startsWith('image/')) {
+        await loadImage(file);
+      }
+    }
+
+    if (slides.length > 0) {
+      currentSlide = 0;
+      renderCurrentSlide();
+      document.getElementById('slideEmptyState').classList.add('hidden');
+    }
+  }
+
+  async function loadPDF(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2 });
+      const offscreen = document.createElement('canvas');
+      offscreen.width = viewport.width;
+      offscreen.height = viewport.height;
+      const ctx = offscreen.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      const blob = await new Promise(r => offscreen.toBlob(r, 'image/png'));
+      slides.push({ type: 'image', data: blob, label: `Slide ${slides.length + 1}` });
+    }
+  }
+
+  async function loadImage(file) {
+    slides.push({ type: 'image', data: file, label: `Slide ${slides.length + 1}` });
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Slide Navigation & Rendering
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function renderCurrentSlide() {
+    if (slides.length === 0) return;
+    const slide = slides[currentSlide];
+
+    if (slide.type === 'sample') {
+      renderSampleSlide(slide.data);
+    } else {
+      const canvas = document.getElementById('slideCanvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = 800; canvas.height = 480;
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 800, 480);
+        const scale = Math.min(800 / img.width, 480 / img.height);
+        const w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, (800 - w) / 2, (480 - h) / 2, w, h);
+      };
+      img.src = URL.createObjectURL(slide.data);
+    }
+
+    document.getElementById('slideIndicator').textContent = `Slide ${currentSlide + 1} of ${slides.length}`;
+  }
+
+  function prevSlide() { if (currentSlide > 0) { currentSlide--; renderCurrentSlide(); } }
+  function nextSlide() { if (currentSlide < slides.length - 1) { currentSlide++; renderCurrentSlide(); } }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Get canvas as Blob for upload
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function getSlideBlob() {
+    return new Promise((resolve) => {
+      const slide = slides[currentSlide];
+      if (!slide) { resolve(null); return; }
+
+      if (slide.type === 'image') {
+        resolve(slide.data);
+      } else {
+        // Sample slide — export canvas
+        const canvas = document.getElementById('slideCanvas');
+        canvas.toBlob(blob => resolve(blob), 'image/png');
+      }
+    });
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  API Calls
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function callInterrogate(slideBlob, userMessage) {
+    const fd = new FormData();
+    if (slideBlob) fd.append('slide_image', slideBlob, 'slide.png');
+    fd.append('slide_number', String(currentSlide + 1));
+    fd.append('user_message', userMessage);
+    fd.append('persona', document.getElementById('personaSelect').value);
+    fd.append('provider', document.getElementById('providerSelect').value);
+    fd.append('api_key', document.getElementById('apiKeyInput').value);
+
+    const resp = await fetch('/api/interrogate', { method: 'POST', body: fd });
+    return resp.json();
+  }
+
+  async function resetSession() {
+    await fetch('/api/reset', { method: 'POST' });
+    // Reset UI
+    document.getElementById('chatFeed').innerHTML = `
+      <div class="flex justify-center py-8">
+        <span class="text-xs text-slate-600 italic">Session reset. Upload a slide to start.</span>
+      </div>`;
+    updateTelemetry({ conviction_score: 50, evasion_strikes: 0, detected_industry: 'Detecting...', business_model: 'Analyzing...' }, 0);
+    document.getElementById('visualClaimsList').innerHTML = '<p class="italic text-slate-600">No claims extracted yet.</p>';
+    document.getElementById('claimLedgerList').innerHTML = '<p class="italic text-slate-600 py-4 text-center">Claims will appear here.</p>';
+    document.getElementById('verdictContent').classList.add('hidden');
+    document.getElementById('skillContent').textContent = 'SKILL.md will auto-update as you interrogate slides.';
+    document.getElementById('simChipsContainer').classList.add('opacity-40', 'pointer-events-none');
+    document.getElementById('turnCount').textContent = 'Turn 0';
+    lastSimStrong = ''; lastSimEvasive = '';
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Pitch Current Slide
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function pitchCurrentSlide() {
+    if (slides.length === 0) return;
+
+    const btn = document.getElementById('pitchSlideBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="animate-pulse">🔄 Gemma 4 is analyzing slide...</span>';
+
+    try {
+      const blob = await getSlideBlob();
+      const data = await callInterrogate(blob, '');
+      handleInterrogationResponse(data, true);
+    } catch (e) {
+      appendChat('system', `⚠️ Error: ${e.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Pitch This Slide to VC';
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Send Defense (text reply)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function sendDefense() {
+    const input = document.getElementById('userInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    appendChat('founder', msg, 'defense');
+
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="animate-pulse">⏳</span>';
+
+    try {
+      const data = await callInterrogate(null, msg);
+      handleInterrogationResponse(data, false);
+    } catch (e) {
+      appendChat('system', `⚠️ Error: ${e.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Send Defense ↵';
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Handle interrogation response
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function handleInterrogationResponse(data, isSlideUpload) {
+    const session = data.session || {};
+
+    // VC spoken response
+    let vcHtml = data.vc_spoken_response || '';
+
+    // Contradiction callout
+    if (data.contradiction_detected && data.contradiction_detail) {
+      vcHtml += `<div class="contradiction-box mt-2 p-2 rounded text-[11px] text-rose-300">
+        <span class="font-bold text-rose-400">⚠️ CONTRADICTION:</span> ${escapeHtml(data.contradiction_detail)}
+      </div>`;
+    }
+
+    // Evasion callout
+    if (data.evasion_detected && !data.contradiction_detected) {
+      vcHtml += `<div class="contradiction-box mt-2 p-2 rounded text-[11px] text-amber-300" style="border-left-color: #f59e0b;">
+        <span class="font-bold text-amber-400">🚨 EVASION DETECTED:</span> The VC noticed a non-answer.
+      </div>`;
+    }
+
+    // Persona badge
+    const personaNames = {
+      sand_hill_vc: '🦈 Sand Hill VC',
+      ruthless_cfo: '📊 CFO Auditor',
+      enterprise_buyer: '🏢 Enterprise Buyer',
+      demo_day_judge: '🏆 Demo Judge',
+    };
+    const personaLabel = personaNames[data.turn?.persona] || '🦈 VC';
+    appendChat('vc', vcHtml, 'interrogation', personaLabel);
+
+    // TTS
+    if (ttsEnabled && data.vc_spoken_response) {
+      speak(data.vc_spoken_response);
+    }
+
+    // Update telemetry
+    updateTelemetry(session, data.conviction_delta || 0);
+
+    // Visual claims
+    if (data.visual_claims && data.visual_claims.length > 0) {
+      updateVisualClaims(data.visual_claims);
+    }
+
+    // Claim ledger
+    updateClaimLedger(session.claim_ledger || []);
+
+    // Simulated replies
+    lastSimStrong = data.simulated_strong_reply || '';
+    lastSimEvasive = data.simulated_evasive_reply || '';
+    const simContainer = document.getElementById('simChipsContainer');
+    simContainer.classList.remove('opacity-40', 'pointer-events-none');
+
+    // Turn count
+    document.getElementById('turnCount').textContent = `Turn ${session.history?.length || 0}`;
+
+    // Auto-update SKILL.md preview
+    fetchSkillPreview();
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Chat Feed
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function appendChat(role, content, type, label) {
+    const feed = document.getElementById('chatFeed');
+    // Remove empty state
+    const empty = feed.querySelector('.justify-center');
+    if (empty) empty.remove();
+
+    const bubble = document.createElement('div');
+
+    if (role === 'vc') {
+      bubble.className = 'flex gap-2.5 items-start';
+      bubble.innerHTML = `
+        <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-sm">🦈</div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-[10px] font-bold text-emerald-400 uppercase">${label}</span>
+            <span class="text-[10px] text-slate-600">${new Date().toLocaleTimeString()}</span>
+          </div>
+          <div class="bg-slate-800/60 rounded-lg rounded-tl-none px-3 py-2.5 text-sm text-slate-200 leading-relaxed border border-slate-700/40">
+            ${content}
+          </div>
+        </div>`;
+    } else if (role === 'founder') {
+      bubble.className = 'flex gap-2.5 items-start justify-end';
+      bubble.innerHTML = `
+        <div class="flex-1 text-right">
+          <div class="flex items-center justify-end gap-2 mb-1">
+            <span class="text-[10px] text-slate-600">${new Date().toLocaleTimeString()}</span>
+            <span class="text-[10px] font-bold text-violet-400 uppercase">Founder</span>
+          </div>
+          <div class="bg-violet-500/10 rounded-lg rounded-tr-none px-3 py-2.5 text-sm text-slate-200 leading-relaxed border border-violet-500/15 text-left inline-block max-w-[90%]">
+            ${escapeHtml(content)}
+          </div>
+        </div>
+        <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-sm">👤</div>`;
+    } else {
+      bubble.className = 'text-center';
+      bubble.innerHTML = `<span class="text-xs text-slate-500 italic">${content}</span>`;
+    }
+
+    feed.appendChild(bubble);
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Telemetry Updates
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function updateTelemetry(session, delta) {
+    const score = session.conviction_score ?? 50;
+    const strikes = session.evasion_strikes ?? 0;
+
+    // Conviction
+    document.getElementById('convictionValue').textContent = score;
+    document.getElementById('convictionBar').style.width = score + '%';
+
+    // Color the bar based on score
+    const bar = document.getElementById('convictionBar');
+    if (score >= 68) {
+      bar.className = 'conviction-bar h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400';
+    } else if (score >= 45) {
+      bar.className = 'conviction-bar h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400';
+    } else {
+      bar.className = 'conviction-bar h-full rounded-full bg-gradient-to-r from-rose-500 to-rose-400';
+    }
+
+    // Delta badge
+    const deltaEl = document.getElementById('convictionDelta');
+    const sign = delta > 0 ? '+' : '';
+    deltaEl.textContent = sign + delta;
+    if (delta > 0) {
+      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400';
+    } else if (delta < 0) {
+      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-400';
+    } else {
+      deltaEl.className = 'ml-auto px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-500';
+    }
+
+    // Skepticism heat
+    const badge = document.getElementById('skepticismBadge');
+    if (strikes >= 3) {
+      badge.textContent = '🔥 HOSTILE DILIGENCE';
+      badge.className = 'inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/20 mt-1 animate-pulse';
+    } else if (strikes >= 1) {
+      badge.textContent = '⚡ HIGH SKEPTICISM';
+      badge.className = 'inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20 mt-1';
+    } else {
+      badge.textContent = '🔍 PROBING';
+      badge.className = 'inline-block px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 mt-1';
+    }
+
+    // Strike dots
+    document.getElementById('strikesValue').textContent = strikes;
+    for (let i = 1; i <= 3; i++) {
+      const dot = document.getElementById('strike' + i);
+      if (i <= strikes) {
+        dot.className = 'w-3 h-3 rounded-full bg-rose-500 border border-rose-400';
+      } else {
+        dot.className = 'w-3 h-3 rounded-full bg-slate-700 border border-slate-600';
+      }
+    }
+
+    // Industry & Business Model pills
+    if (session.detected_industry) {
+      document.getElementById('industryPill').textContent = session.detected_industry;
+    }
+    if (session.business_model) {
+      document.getElementById('bizModelPill').textContent = session.business_model;
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Visual Claims
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function updateVisualClaims(claims) {
+    const el = document.getElementById('visualClaimsList');
+    el.innerHTML = claims.map((c, i) => `
+      <div class="flex items-start gap-2 p-2 rounded-lg bg-slate-800/40 border border-slate-700/30">
+        <span class="flex-shrink-0 w-5 h-5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold flex items-center justify-center">${i + 1}</span>
+        <span class="text-slate-300 text-[11px] leading-relaxed">${escapeHtml(c)}</span>
+      </div>
+    `).join('');
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Claim Ledger
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function updateClaimLedger(ledger) {
+    const el = document.getElementById('claimLedgerList');
+    if (!ledger.length) {
+      el.innerHTML = '<p class="italic text-slate-600 py-4 text-center">Claims will appear here.</p>';
+      return;
+    }
+    el.innerHTML = ledger.map(c => {
+      const sourceColor = c.source === 'Visual Slide'
+        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
+        : 'bg-violet-500/15 text-violet-400 border-violet-500/20';
+      return `
+        <div class="flex items-start gap-1.5 p-1.5 rounded bg-slate-800/30">
+          <span class="flex-shrink-0 px-1 py-0.5 rounded text-[9px] font-bold bg-slate-700 text-slate-400">S${c.slide}</span>
+          <span class="flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${sourceColor}">${c.source === 'Visual Slide' ? '👁' : '🗣'}</span>
+          <span class="text-[11px] text-slate-400 leading-snug">${escapeHtml(c.claim)}</span>
+        </div>`;
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Simulated Replies
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function simulateReply(type) {
+    const msg = type === 'strong' ? lastSimStrong : lastSimEvasive;
+    if (!msg || msg === 'N/A') return;
+    document.getElementById('userInput').value = msg;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Verdict
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function generateVerdict() {
+    const btn = document.getElementById('generateVerdictBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="animate-pulse">⏳ Generating IC Memo...</span>';
+
+    try {
+      const fd = new FormData();
+      fd.append('provider', document.getElementById('providerSelect').value);
+      fd.append('api_key', document.getElementById('apiKeyInput').value);
+
+      const resp = await fetch('/api/verdict', { method: 'POST', body: fd });
+      const data = await resp.json();
+
+      const content = document.getElementById('verdictContent');
+      content.classList.remove('hidden');
+
+      // Decision badge
+      const decBox = document.getElementById('verdictDecisionBox');
+      const dec = data.decision || 'HARD PASS';
+      document.getElementById('verdictDecision').textContent = dec;
+      document.getElementById('verdictHeadline').textContent = data.headline_offer_or_reason || '';
+
+      if (dec === 'TERM SHEET OFFERED') {
+        decBox.className = 'text-center py-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10';
+        document.getElementById('verdictDecision').className = 'text-sm font-black text-emerald-400';
+      } else if (dec === 'CONDITIONAL SECOND MEETING') {
+        decBox.className = 'text-center py-3 rounded-lg border border-amber-500/30 bg-amber-500/10';
+        document.getElementById('verdictDecision').className = 'text-sm font-black text-amber-400';
+      } else {
+        decBox.className = 'text-center py-3 rounded-lg border border-rose-500/30 bg-rose-500/10';
+        document.getElementById('verdictDecision').className = 'text-sm font-black text-rose-400';
+      }
+
+      // Scores
+      const scores = data.scores || {};
+      setScoreBar('Market', scores.market_timing);
+      setScoreBar('Econ', scores.unit_economics);
+      setScoreBar('Moat', scores.defensibility_moat);
+      setScoreBar('Founder', scores.founder_conviction);
+
+      // Strength & Flaw
+      document.getElementById('verdictStrength').textContent = data.biggest_strength || 'N/A';
+      document.getElementById('verdictFlaw').textContent = data.fatal_flaw || 'N/A';
+
+      // Fixes
+      const fixesList = document.getElementById('verdictFixes');
+      const fixes = data.mandatory_deck_fixes || [];
+      fixesList.innerHTML = fixes.map(f => `<li class="py-0.5">${escapeHtml(f)}</li>`).join('');
+
+    } catch (e) {
+      appendChat('system', `⚠️ Verdict error: ${e.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '⚖️ Generate Final VC Verdict & Term Sheet';
+    }
+  }
+
+  function setScoreBar(suffix, value) {
+    const v = value ?? 0;
+    document.getElementById('score' + suffix).textContent = v;
+    // Use requestAnimationFrame for smooth animation
+    requestAnimationFrame(() => {
+      document.getElementById('bar' + suffix).style.width = v + '%';
+    });
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  SKILL.md
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function fetchSkillPreview() {
+    try {
+      const resp = await fetch('/api/skill');
+      const text = await resp.text();
+      lastSkillMd = text;
+      document.getElementById('skillContent').textContent = text;
+    } catch (e) {
+      console.warn('Skill preview fetch failed', e);
+    }
+  }
+
+  function downloadSkillMd() {
+    if (!lastSkillMd) { fetchSkillPreview(); return; }
+    const blob = new Blob([lastSkillMd], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'SKILL.md';
+    a.click();
+
+    // Also trigger disk write
+    fetch('/api/skill', { method: 'POST' }).catch(() => {});
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Tab Switching
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function switchTab(tab) {
+    const tabVerdict = document.getElementById('tabVerdict');
+    const tabSkill = document.getElementById('tabSkill');
+    const verdictPanel = document.getElementById('verdictPanel');
+    const skillPanel = document.getElementById('skillPanel');
+
+    if (tab === 'verdict') {
+      tabVerdict.className = 'flex-1 px-3 py-2.5 text-xs font-semibold tab-active transition-colors';
+      tabSkill.className = 'flex-1 px-3 py-2.5 text-xs font-semibold tab-inactive transition-colors';
+      verdictPanel.classList.remove('hidden');
+      skillPanel.classList.add('hidden');
+    } else {
+      tabSkill.className = 'flex-1 px-3 py-2.5 text-xs font-semibold tab-active transition-colors';
+      tabVerdict.className = 'flex-1 px-3 py-2.5 text-xs font-semibold tab-inactive transition-colors';
+      skillPanel.classList.remove('hidden');
+      verdictPanel.classList.add('hidden');
+      fetchSkillPreview();
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  TTS (Text-to-Speech)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function toggleTTS() {
+    ttsEnabled = !ttsEnabled;
+    const btn = document.getElementById('ttsToggleBtn');
+    if (ttsEnabled) {
+      btn.innerHTML = '🔊 Voice ON';
+      btn.classList.remove('bg-slate-700');
+    } else {
+      btn.innerHTML = '🔇 Muted';
+      btn.classList.add('bg-slate-700');
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  function speak(text) {
+    if (!ttsEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.05;
+    utterance.pitch = 0.95;
+    utterance.volume = 0.9;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Mic (Push-to-Talk via Web Speech API)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function toggleMic() {
+    const micBtn = document.getElementById('micBtn');
+
+    if (isRecording) {
+      isRecording = false;
+      micBtn.classList.remove('mic-recording');
+      micBtn.innerHTML = '🎙️';
+      if (recognition) recognition.stop();
+      return;
+    }
+
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      appendChat('system', '⚠️ Speech recognition not supported in this browser.', 'error');
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (const result of event.results) {
+        transcript += result[0].transcript;
+      }
+      document.getElementById('userInput').value = transcript;
+    };
+
+    recognition.onend = () => {
+      isRecording = false;
+      micBtn.classList.remove('mic-recording');
+      micBtn.innerHTML = '🎙️';
+    };
+
+    recognition.onerror = (e) => {
+      isRecording = false;
+      micBtn.classList.remove('mic-recording');
+      micBtn.innerHTML = '🎙️';
+      if (e.error !== 'no-speech') {
+        appendChat('system', `⚠️ Mic error: ${e.error}`, 'error');
+      }
+    };
+
+    recognition.start();
+    isRecording = true;
+    micBtn.classList.add('mic-recording');
+    micBtn.innerHTML = '⏹️';
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Utilities
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Init — draw empty state on canvas
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  (function init() {
+    const canvas = document.getElementById('slideCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 800; canvas.height = 480;
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, 800, 480);
+  })();
+  </script>
+
+</body>
+</html>
