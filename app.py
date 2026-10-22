@@ -7,6 +7,9 @@ Endpoints
 GET  /api/state        → current session snapshot
 POST /api/reset        → reset session to defaults
 POST /api/interrogate  → multimodal pitch-deck interrogation turn
+GET  /api/skill        → compile & return SKILL.md from session learnings
+POST /api/skill        → compile, write to disk, & return SKILL.md
+POST /api/verdict      → IC term-sheet / pass generator
 
 Copyright 2026  HotSeat AI Contributors
 SPDX-License-Identifier: Apache-2.0
@@ -17,11 +20,13 @@ from __future__ import annotations
 import json
 import logging
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 
 from engine import Gemma4Router
 
@@ -396,11 +401,272 @@ async def interrogate(
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Self-Improving Agent Skill Compiler  (/api/skill)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+_SKILL_DIR = Path(".claude/skills/pitch-defense")
+_SKILL_PATH = _SKILL_DIR / "SKILL.md"
+
+
+def _compile_skill_md() -> str:
+    """Compile the current session learnings into a spec-compliant SKILL.md."""
+    industry = SESSION_STATE["detected_industry"]
+    score = SESSION_STATE["conviction_score"]
+    contradictions = SESSION_STATE["contradictions_logged"]
+    rules = SESSION_STATE["skill_rules"]
+
+    # ── YAML frontmatter ────────────────────────────────────────────────────
+    frontmatter = (
+        "---\n"
+        "name: hotseat-pitch-defense\n"
+        "description: >\n"
+        "  Audit pitch decks, financial projections, and founder narratives for cross-slide\n"
+        "  contradictions, unit economics flaws, and investor objections before live VC pitches.\n"
+        "license: Apache-2.0\n"
+        "metadata:\n"
+        "  engine: Gemma 4 Multimodal Harness\n"
+        f"  detected_industry: \"{industry}\"\n"
+        f"  conviction_score: \"{score}/100\"\n"
+        "---\n"
+    )
+
+    # ── Section 1: Contradictions & Red Flags ───────────────────────────────
+    section1_lines = [
+        "## 1. Discovered Cross-Slide Contradictions & Red Flags\n",
+    ]
+    if contradictions:
+        for i, c in enumerate(contradictions, 1):
+            section1_lines.append(f"{i}. {c}")
+    else:
+        section1_lines.append(
+            "_No contradictions detected yet. Upload more slides and defend your claims._"
+        )
+    section1 = "\n".join(section1_lines)
+
+    # ── Section 2: Learned Guardrails ───────────────────────────────────────
+    section2_lines = [
+        "## 2. Learned Domain & Unit-Economics Guardrails (Hermes Self-Improving Loop)\n",
+    ]
+    if rules:
+        for i, rule in enumerate(rules, 1):
+            section2_lines.append(f"{i}. {rule}")
+    else:
+        section2_lines.append(
+            "_No guardrails learned yet. Complete at least one interrogation turn._"
+        )
+    section2 = "\n".join(section2_lines)
+
+    # ── Section 3: Pre-Pitch Verification Checklist ─────────────────────────
+    checklist_items = [
+        "Verify all TAM/SAM/SOM figures are internally consistent across slides.",
+        "Confirm unit economics (CAC, LTV, gross margin) match the revenue model slide.",
+        "Ensure timeline milestones do not contradict fundraising or hiring slides.",
+        "Check that competitive landscape claims align with the stated moat/defensibility.",
+        "Validate that financial projections use assumptions disclosed elsewhere in the deck.",
+    ]
+    # Append any industry-specific guardrails as bonus checklist items
+    for rule in rules[:5]:
+        checklist_items.append(f"[Learned] {rule}")
+
+    section3_lines = [
+        "## 3. Mandatory Pre-Pitch Verification Checklist\n",
+    ]
+    for item in checklist_items:
+        section3_lines.append(f"- [ ] {item}")
+    section3 = "\n".join(section3_lines)
+
+    # ── Assemble ────────────────────────────────────────────────────────────
+    skill_md = "\n".join([
+        frontmatter,
+        f"# HotSeat Pitch-Defense Skill  —  {industry}\n",
+        f"> **Conviction score after interrogation: {score}/100**\n",
+        section1,
+        "",
+        section2,
+        "",
+        section3,
+        "",
+    ])
+
+    return skill_md
+
+
+@app.get("/api/skill")
+async def get_skill() -> PlainTextResponse:
+    """Compile and return the SKILL.md content without writing to disk."""
+    skill_md = _compile_skill_md()
+    return PlainTextResponse(content=skill_md, media_type="text/markdown")
+
+
+@app.post("/api/skill")
+async def post_skill() -> JSONResponse:
+    """Compile SKILL.md, write it to disk, and return the content."""
+    skill_md = _compile_skill_md()
+
+    _SKILL_DIR.mkdir(parents=True, exist_ok=True)
+    _SKILL_PATH.write_text(skill_md, encoding="utf-8")
+    logger.info("SKILL.md written to %s (%d bytes)", _SKILL_PATH, len(skill_md))
+
+    return JSONResponse(
+        content={
+            "status": "written",
+            "path": str(_SKILL_PATH),
+            "size_bytes": len(skill_md),
+            "skill_md": skill_md,
+        }
+    )
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Investment Committee Verdict  (/api/verdict)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+def _build_verdict_prompt() -> str:
+    """Build the IC-memo prompt from the full session history."""
+    score = SESSION_STATE["conviction_score"]
+    industry = SESSION_STATE["detected_industry"]
+    biz_model = SESSION_STATE["business_model"]
+    strikes = SESSION_STATE["evasion_strikes"]
+    ledger = SESSION_STATE["claim_ledger"][-_MAX_LEDGER_IN_PROMPT:]
+    history = SESSION_STATE["history"]
+
+    # Determine band
+    if score >= 68:
+        decision_band = "TERM SHEET OFFERED"
+    elif score >= 45:
+        decision_band = "CONDITIONAL SECOND MEETING"
+    else:
+        decision_band = "HARD PASS"
+
+    history_json = json.dumps(history, indent=2) if history else "[]"
+    ledger_json = json.dumps(ledger, indent=2) if ledger else "[]"
+
+    prompt = f"""You are the Investment Committee of a top-tier venture fund.
+
+Below is the complete interrogation record for a startup pitch.
+
+INPUT DATA:
+- Detected Industry: {industry}
+- Business Model: {biz_model}
+- Final Conviction Score: {score}/100
+- Evasion Strikes: {strikes}
+- Decision Band: {decision_band}
+- Claim Ledger (last {_MAX_LEDGER_IN_PROMPT} entries):
+{ledger_json}
+- Q&A History:
+{history_json}
+
+Generate a structured JSON Investment Committee Memo with EXACTLY these keys:
+
+1. "decision": MUST be exactly one of: "TERM SHEET OFFERED", "CONDITIONAL SECOND MEETING", or "HARD PASS" (use the decision band above: "{decision_band}").
+
+2. "headline_offer_or_reason": A single compelling sentence.
+   - If TERM SHEET OFFERED: state the offer, e.g. "₹35 Cr Pre-Money Seed Term Sheet" or "$4M Seed at $20M Pre-Money".
+   - If CONDITIONAL SECOND MEETING: state what must be resolved, e.g. "Revisit after unit economics audit on D2C channel margins".
+   - If HARD PASS: state the reason, e.g. "Passed: Unresolved offline retail margin dilution with contradictory CAC claims".
+
+3. "scores": An object with exactly 4 integer keys (each 0–100):
+   - "market_timing": How well-timed is this market entry?
+   - "unit_economics": How sound are the financials?
+   - "defensibility_moat": How defensible is the business?
+   - "founder_conviction": How convincing was the founder under pressure?
+
+4. "biggest_strength": 1 specific sentence citing the founder's strongest claim or defense from the Q&A history.
+
+5. "fatal_flaw": 1 specific sentence citing their worst contradiction or dodged question from the Q&A history.
+
+6. "mandatory_deck_fixes": A JSON array of exactly 3 strings — concrete, actionable slide fixes the founder must make before their next pitch.
+
+Respond ONLY with the JSON object. No markdown fences, no commentary."""
+
+    return prompt
+
+
+@app.post("/api/verdict")
+async def verdict(
+    provider: str = Form("gemini_api"),
+    api_key: str = Form(""),
+) -> JSONResponse:
+    """Generate an Investment Committee term-sheet / pass memo.
+
+    Uses the full session history to produce a structured IC verdict
+    via a text-only Gemma 4 call (no image).
+    """
+    prompt = _build_verdict_prompt()
+
+    score = SESSION_STATE["conviction_score"]
+    if score >= 68:
+        default_decision = "TERM SHEET OFFERED"
+    elif score >= 45:
+        default_decision = "CONDITIONAL SECOND MEETING"
+    else:
+        default_decision = "HARD PASS"
+
+    fallback: dict[str, Any] = {
+        "decision": default_decision,
+        "headline_offer_or_reason": "Unable to generate detailed memo — see session history.",
+        "scores": {
+            "market_timing": 50,
+            "unit_economics": 50,
+            "defensibility_moat": 50,
+            "founder_conviction": score,
+        },
+        "biggest_strength": "N/A",
+        "fatal_flaw": "N/A",
+        "mandatory_deck_fixes": [
+            "Add verifiable TAM source citations.",
+            "Include a clear unit economics slide.",
+            "Address competitive landscape gaps.",
+        ],
+    }
+
+    result = await router.generate(
+        prompt=prompt,
+        image_bytes=None,
+        fallback_dict=fallback,
+        provider=provider,
+        api_key_override=api_key if api_key else None,
+    )
+
+    # Normalise output
+    memo: dict[str, Any] = {
+        "decision": result.get("decision", fallback["decision"]),
+        "headline_offer_or_reason": result.get(
+            "headline_offer_or_reason", fallback["headline_offer_or_reason"]
+        ),
+        "scores": result.get("scores", fallback["scores"]),
+        "biggest_strength": result.get(
+            "biggest_strength", fallback["biggest_strength"]
+        ),
+        "fatal_flaw": result.get("fatal_flaw", fallback["fatal_flaw"]),
+        "mandatory_deck_fixes": result.get(
+            "mandatory_deck_fixes", fallback["mandatory_deck_fixes"]
+        ),
+        "engine_used": result.get("engine_used", "unknown"),
+        "session": SESSION_STATE,
+    }
+
+    logger.info(
+        "Verdict generated  |  decision=%s  |  score=%d  |  engine=%s",
+        memo["decision"],
+        SESSION_STATE["conviction_score"],
+        memo["engine_used"],
+    )
+
+    return JSONResponse(content=memo)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  Helpers
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def _clamp(value: int, lo: int, hi: int) -> int:
     """Clamp *value* between *lo* and *hi* inclusive."""
     return max(lo, min(hi, value))
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Static Files Mount  (MUST be last — catch-all for the SPA frontend)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Path("static").mkdir(exist_ok=True)
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
