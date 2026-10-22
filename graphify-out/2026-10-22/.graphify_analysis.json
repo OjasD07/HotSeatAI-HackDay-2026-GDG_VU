@@ -4,9 +4,7 @@
       "base64",
       "dotenv",
       "engine",
-      "engine_extract_json_safely",
       "engine_rationale_1",
-      "engine_rationale_64",
       "google",
       "google_genai",
       "json",
@@ -31,6 +29,7 @@
     ],
     "2": [
       "any",
+      "engine_extract_json_safely",
       "engine_gemma4router",
       "engine_gemma4router_cloud_cascade",
       "engine_gemma4router_generate",
@@ -45,46 +44,70 @@
       "engine_rationale_307",
       "engine_rationale_379",
       "engine_rationale_448",
+      "engine_rationale_64",
       "readme_1_track_best_use_of_gemma_4_via_gemini_api",
       "readme_2_track_open_source_open_weight_ai_agent_skills",
       "readme_3_compulsory_sponsor_integration_graphify_knowledge_graph",
       "readme_hackathon_track_sponsor_compliance_disclosures"
     ],
     "3": [
-      "app",
-      "app_rationale_1",
-      "copy",
-      "fastapi",
-      "fastapi_middleware_cors",
-      "fastapi_responses",
-      "fastapi_staticfiles",
-      "pathlib",
-      "uvicorn"
+      "static_js_app",
+      "static_js_app_appendchat",
+      "static_js_app_cachedpingresults",
+      "static_js_app_callinterrogate",
+      "static_js_app_downloadskill",
+      "static_js_app_escapehtml",
+      "static_js_app_fetchskillpreview",
+      "static_js_app_formatpingbadge",
+      "static_js_app_generateverdict",
+      "static_js_app_handleinterrogationresponse",
+      "static_js_app_hideconnectionerror",
+      "static_js_app_initializeapp",
+      "static_js_app_persona_labels",
+      "static_js_app_pitchcurrentslide",
+      "static_js_app_removeinterrogationskeleton",
+      "static_js_app_resetsession",
+      "static_js_app_sendfounderreply",
+      "static_js_app_setscorebar",
+      "static_js_app_showconnectionerror",
+      "static_js_app_showinterrogationskeleton",
+      "static_js_app_switchtab",
+      "static_js_app_testallconnections",
+      "static_js_app_toggleprovidermodelinput",
+      "static_js_app_updateclaimledger",
+      "static_js_app_updatepersonabadge",
+      "static_js_app_updatetelemetry",
+      "static_js_app_updatetelemetrybadge",
+      "static_js_app_updatevisualclaims"
     ],
     "4": [
-      "app_build_verdict_prompt",
-      "app_clamp",
-      "app_rationale_182",
-      "app_rationale_668",
-      "app_rationale_747",
-      "app_verdict"
+      "static_js_decks",
+      "static_js_decks_dataurltoblob",
+      "static_js_decks_drawslidetocanvas",
+      "static_js_decks_getslideblob",
+      "static_js_decks_handlefileupload",
+      "static_js_decks_loadimagedownscaled",
+      "static_js_decks_loadpdf",
+      "static_js_decks_loadsampledeck",
+      "static_js_decks_nextslide",
+      "static_js_decks_prevslide",
+      "static_js_decks_rendercurrentslide",
+      "static_js_decks_sample_decks",
+      "static_js_decks_slides",
+      "static_js_decks_wrapcanvastext"
     ],
     "5": [
-      "app_compile_skill_md",
-      "app_get_skill",
-      "app_rationale_239",
-      "app_rationale_643",
-      "plaintextresponse",
-      "readme_4_stage_cognitive_diligence_pipeline",
-      "readme_architectural_component_breakdown",
-      "readme_system_architecture"
+      "static_js_voice",
+      "static_js_voice_speakvcresponse",
+      "static_js_voice_togglemic",
+      "static_js_voice_toggletts"
     ],
     "6": [
       "claude_skills_pitch_defense_skill",
       "claude_skills_pitch_defense_skill_1_material_cross_slide_contradictions_audit_flags",
       "claude_skills_pitch_defense_skill_2_synthesized_institutional_diligence_guardrails_gemma_4_live_loop",
       "claude_skills_pitch_defense_skill_3_pre_committee_verification_protocol",
-      "claude_skills_pitch_defense_skill_institutional_pitch_defense_skill_enterprise_saas",
+      "claude_skills_pitch_defense_skill_institutional_pitch_defense_skill_fintech_cross_border_b2b_treasury_payments",
       "readme",
       "readme_1_clone_the_repository_create_a_virtual_environment",
       "readme_2_install_dependencies",
@@ -92,6 +115,8 @@
       "readme_4_start_the_fastapi_diligence_server",
       "readme_5_update_the_graphify_repository_knowledge_graph",
       "readme_60_second_judge_verification_guide",
+      "readme_6_cloudflare_workers_edge_deployment_observability_https_hotseat_ai_ojasdeshpande_in",
+      "readme_author",
       "readme_executive_overview_problem_statement",
       "readme_hotseat_ai",
       "readme_key_institutional_features",
@@ -108,6 +133,59 @@
       "claude_claude_graphify"
     ],
     "9": [
+      "worker",
+      "worker_arraybuffertobase64",
+      "worker_buildinterrogationprompt",
+      "worker_buildverdictprompt",
+      "worker_callgeminicascade",
+      "worker_clamp",
+      "worker_cloud_cascade",
+      "worker_compileskillmd",
+      "worker_cors_headers",
+      "worker_extractjsonsafely",
+      "worker_fetch",
+      "worker_initial_state",
+      "worker_jsonresponse",
+      "worker_pingprovider",
+      "worker_session_state"
+    ],
+    "10": [
+      "package",
+      "package_description",
+      "package_devdependencies",
+      "package_devdependencies_wrangler",
+      "package_main",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_deploy",
+      "package_scripts_dev",
+      "package_type",
+      "package_version",
+      "ref_wrangler"
+    ],
+    "11": [
+      "app",
+      "app_rationale_1",
+      "copy",
+      "fastapi",
+      "fastapi_middleware_cors",
+      "fastapi_responses",
+      "fastapi_staticfiles",
+      "pathlib",
+      "uvicorn"
+    ],
+    "12": [
+      "app_compile_skill_md",
+      "app_get_skill",
+      "app_rationale_239",
+      "app_rationale_643",
+      "plaintextresponse",
+      "readme_4_stage_cognitive_diligence_pipeline",
+      "readme_architectural_component_breakdown",
+      "readme_system_architecture"
+    ],
+    "13": [
       "app_get_ping",
       "app_get_state",
       "app_health_check",
@@ -117,7 +195,15 @@
       "get",
       "jsonresponse"
     ],
-    "10": [
+    "14": [
+      "app_build_verdict_prompt",
+      "app_clamp",
+      "app_rationale_182",
+      "app_rationale_668",
+      "app_rationale_747",
+      "app_verdict"
+    ],
+    "15": [
       "app_build_interrogation_prompt",
       "app_interrogate",
       "app_rationale_137",
@@ -126,17 +212,22 @@
     ]
   },
   "cohesion": {
-    "0": 0.14166666666666666,
+    "0": 0.14285714285714285,
     "1": 0.25,
-    "2": 0.17543859649122806,
-    "3": 0.2222222222222222,
-    "4": 0.3333333333333333,
-    "5": 0.25,
-    "6": 0.1111111111111111,
+    "2": 0.17142857142857143,
+    "3": 0.2037037037037037,
+    "4": 0.26373626373626374,
+    "5": 0.5,
+    "6": 0.1,
     "7": 1.0,
     "8": 1.0,
-    "9": 0.32142857142857145,
-    "10": 0.4
+    "9": 0.21904761904761905,
+    "10": 0.15384615384615385,
+    "11": 0.2222222222222222,
+    "12": 0.25,
+    "13": 0.32142857142857145,
+    "14": 0.3333333333333333,
+    "15": 0.4
   },
   "gods": [
     {
@@ -145,8 +236,13 @@
       "degree": 14
     },
     {
-      "id": "engine_extract_json_safely",
-      "label": "extract_json_safely()",
+      "id": "worker_fetch",
+      "label": "fetch()",
+      "degree": 11
+    },
+    {
+      "id": "static_js_app_handleinterrogationresponse",
+      "label": "handleInterrogationResponse()",
       "degree": 10
     },
     {
@@ -155,39 +251,34 @@
       "degree": 9
     },
     {
-      "id": "app_persist_skill_md",
-      "label": "_persist_skill_md()",
-      "degree": 7
+      "id": "engine_extract_json_safely",
+      "label": "extract_json_safely()",
+      "degree": 9
     },
     {
-      "id": "app_verdict",
-      "label": "verdict()",
-      "degree": 7
+      "id": "static_js_app_appendchat",
+      "label": "appendChat()",
+      "degree": 8
     },
     {
-      "id": "readme_hotseat_ai",
-      "label": "HotSeat AI",
-      "degree": 7
+      "id": "static_js_app_generateverdict",
+      "label": "generateVerdict()",
+      "degree": 8
     },
     {
-      "id": "readme_hackathon_track_sponsor_compliance_disclosures",
-      "label": "Hackathon Track & Sponsor Compliance Disclosures",
-      "degree": 6
+      "id": "static_js_app_pitchcurrentslide",
+      "label": "pitchCurrentSlide()",
+      "degree": 8
     },
     {
-      "id": "readme_quickstart_local_setup_instructions",
-      "label": "Quickstart & Local Setup Instructions",
-      "degree": 6
+      "id": "static_js_app_sendfounderreply",
+      "label": "sendFounderReply()",
+      "degree": 8
     },
     {
-      "id": "app_post_skill",
-      "label": "post_skill()",
-      "degree": 5
-    },
-    {
-      "id": "app_reset_state",
-      "label": "reset_state()",
-      "degree": 5
+      "id": "static_js_app_testallconnections",
+      "label": "testAllConnections()",
+      "degree": 8
     }
   ],
   "surprises": [
@@ -225,22 +316,22 @@
       "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
     },
     {
-      "source": "3. Compulsory Sponsor Integration — Graphify Knowledge Graph",
-      "target": "extract_json_safely()",
+      "source": "Hackathon Track & Sponsor Compliance Disclosures",
+      "target": "_persist_skill_md()",
       "source_files": [
         "README.md",
-        "engine.py"
+        "app.py"
       ],
       "confidence": "INFERRED",
       "relation": "references",
       "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
     },
     {
-      "source": "Architectural Component Breakdown",
-      "target": "extract_json_safely()",
+      "source": "3. Compulsory Sponsor Integration — Graphify Knowledge Graph",
+      "target": "verdict()",
       "source_files": [
         "README.md",
-        "engine.py"
+        "app.py"
       ],
       "confidence": "INFERRED",
       "relation": "references",
@@ -250,8 +341,8 @@
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `HotSeat AI` connect `HotSeat AI` to `Gemma4Router`, `get_skill`?",
-      "why": "High betweenness centrality (0.292) - this node is a cross-community bridge."
+      "question": "Why does `Gemma4Router` connect `Gemma4Router` to `engine.py`, `app.py`, `_compile_skill_md`?",
+      "why": "High betweenness centrality (0.128) - this node is a cross-community bridge."
     },
     {
       "type": "verify_inferred",
@@ -259,29 +350,29 @@
       "why": "`Gemma4Router` has 4 INFERRED edges - model-reasoned connections that need verification."
     },
     {
+      "type": "isolated_nodes",
+      "question": "What connects `wrangler` to the rest of the system?",
+      "why": "1 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
       "type": "low_cohesion",
       "question": "Should `engine.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.14166666666666666 - nodes in this community are weakly interconnected."
+      "why": "Cohesion score 0.14285714285714285 - nodes in this community are weakly interconnected."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `Hackathon Track & Sponsor Compliance Disclosures` connect `Gemma4Router` to `interrogate`, `HotSeat AI`?",
-      "why": "High betweenness centrality (0.255) - this node is a cross-community bridge."
-    },
-    {
-      "type": "verify_inferred",
-      "question": "Are the 2 inferred relationships involving `extract_json_safely()` (e.g. with `3. Compulsory Sponsor Integration — Graphify Knowledge Graph` and `Architectural Component Breakdown`) actually correct?",
-      "why": "`extract_json_safely()` has 2 INFERRED edges - model-reasoned connections that need verification."
+      "question": "Why does `HotSeat AI` connect `HotSeat AI` to `Gemma4Router`, `_compile_skill_md`?",
+      "why": "High betweenness centrality (0.126) - this node is a cross-community bridge."
     },
     {
       "type": "low_cohesion",
       "question": "Should `HotSeat AI` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.1111111111111111 - nodes in this community are weakly interconnected."
+      "why": "Cohesion score 0.1 - nodes in this community are weakly interconnected."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `Gemma4Router` connect `Gemma4Router` to `engine.py`, `app.py`, `get_skill`?",
-      "why": "High betweenness centrality (0.233) - this node is a cross-community bridge."
+      "question": "Why does `Architectural Component Breakdown` connect `_compile_skill_md` to `worker.js`, `Gemma4Router`?",
+      "why": "High betweenness centrality (0.111) - this node is a cross-community bridge."
     }
   ]
 }

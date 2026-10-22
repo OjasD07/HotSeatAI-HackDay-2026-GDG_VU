@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   ".claude/skills/pitch-defense/SKILL.md": {
-    "mtime": 1792668161.7118497,
-    "seen": 1792668397.776567,
-    "ast_hash": "d4f5b724139185a75cf368775f18c38c",
+    "mtime": 1792669450.5814726,
+    "seen": 1792670118.578939,
+    "ast_hash": "48818cad19fe7ec8f0d30392c66b576f",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1792668521.6691246,
-    "seen": 1792669095.37919,
-    "ast_hash": "97dd684b6ed00f5aafbf2a495f8b1436",
+    "mtime": 1792670198.6637921,
+    "seen": 1792670216.201084,
+    "ast_hash": "d1b788e7297d3aba3f9d33d2c951921e",
     "semantic_hash": ""
   },
   "render.yaml": {
@@ -54,9 +54,9 @@
     "semantic_hash": ""
   },
   "static/index.html": {
-    "mtime": 1792669037.9085608,
-    "seen": 1792669095.379192,
-    "ast_hash": "dfd69d4e1098f8993c4b1fcf07f00791",
+    "mtime": 1792669978.196242,
+    "seen": 1792670118.578943,
+    "ast_hash": "b44395cfcc0edf5932d0ca8b5372858c",
     "semantic_hash": ""
   },
   "static/js/app.js": {
@@ -81,6 +81,18 @@
     "mtime": 1792668640.945175,
     "seen": 1792669095.379193,
     "ast_hash": "0fe0a3e839cfa0ff98e11e5de0ad9014",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1792670189.6160223,
+    "seen": 1792670216.201077,
+    "ast_hash": "f2b685148fb1571b40b2f2c9ddb0c965",
+    "semantic_hash": ""
+  },
+  "worker.js": {
+    "mtime": 1792670058.9323022,
+    "seen": 1792670118.578937,
+    "ast_hash": "7d6428347f2cdb95a9c13ed185ecbebf",
     "semantic_hash": ""
   }
 }

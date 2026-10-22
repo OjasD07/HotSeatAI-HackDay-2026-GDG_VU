@@ -1,0 +1,17 @@
+{
+  "name": "hotseatai-hackday-2026-gdg-vu",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HotSeat AI — Institutional Venture Capital Diligence & Multimodal Pitch Verification Engine on Cloudflare Workers",
+  "main": "worker.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "env:pull": "infisical export --format=dotenv > .env",
+    "start:infisical": "infisical run -- uvicorn app:app --reload --host 0.0.0.0 --port 8000"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

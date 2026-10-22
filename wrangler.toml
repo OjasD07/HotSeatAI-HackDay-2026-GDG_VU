@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# HotSeat AI — Cloudflare Workers Configuration (https://hotseat-ai.ojasdeshpande.in/)
+# Worker Script Name (used by Cloudflare & Infisical Secret Sync):
+#   hotseatai-hackday-2026-gdg-vu
+# ─────────────────────────────────────────────────────────────────────────────
+name = "hotseatai-hackday-2026-gdg-vu"
+main = "worker.js"
+compatibility_date = "2025-02-14"
+workers_dev = true
+keep_vars = true
+
+# Custom Domain Routing: https://hotseat-ai.ojasdeshpande.in/
+routes = [
+  { pattern = "hotseat-ai.ojasdeshpande.in", custom_domain = true }
+]
+
+# Static Assets Binding (Serves ./static at /)
+[assets]
+directory = "./static"
+binding = "ASSETS"
+
+# Note: Secrets (GEMINI_API_KEY, GEMMA_MODEL_ID, GEMMA_FALLBACK_MODELS, etc.)
+# are synced directly from Infisical to Worker Script "hotseatai-hackday-2026-gdg-vu".
+
+# Full Cloudflare Workers Observability, Invocation Logs & Distributed Tracing
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+persist = true

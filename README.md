@@ -6,6 +6,7 @@
 
 *Institutional Venture Capital Diligence, Multimodal Thesis Verification & Self-Improving Agent Skill Compiler powered by Gemma 4.*
 
+[![Live Edge Deployment: hotseat-ai.ojasdeshpande.in](https://img.shields.io/badge/Cloudflare%20Workers-hotseat--ai.ojasdeshpande.in-f38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://hotseat-ai.ojasdeshpande.in/)
 [![Model: Google Gemma 4 (26B-A4B-IT / 31B-IT)](https://img.shields.io/badge/Model-Google%20Gemma%204%20(26B--A4B--IT%20%2F%2031B--IT)-2563eb?style=for-the-badge)](https://ai.google.dev/gemma)
 [![API: Gemini API + Local Ollama](https://img.shields.io/badge/API-Gemini%20API%20%2B%20Local%20Ollama-10b981?style=for-the-badge)](https://ai.google.dev/gemini-api/docs)
 [![Sponsor: Graphify AST Knowledge Graph](https://img.shields.io/badge/Sponsor-Graphify%20AST%20Knowledge%20Graph-d97706?style=for-the-badge)](./graphify-out/GRAPH_REPORT.md)
@@ -79,10 +80,10 @@ graph TD
 
 | Stage | Module | Primary Responsibility | Key Technical Primitives |
 | :--- | :--- | :--- | :--- |
-| **1. Client-Side Visual Ingestion** | `static/index.html` | Rasterizes multi-page PDFs and high-resolution slide images into `1280px` compressed JPEG frames in browser memory; captures voice dictation and manages real-time provider telemetry. | `PDF.js v3.11`, HTML5 `<canvas>`, `SpeechRecognition`, `SpeechSynthesis` |
-| **2. Multimodal Extraction & Cross-Examination** | `engine.py` | Assembles multimodal contents (`[types.Part.from_bytes(...), prompt]`), routes inference to Gemma 4 via Google GenAI SDK or local open-weight runtimes, strips `<thought>` blocks, and measures exact round-trip latency (`ms`). | `google-genai` SDK, `Gemma4Router`, `extract_json_safely()`, `/api/ping` |
-| **3. Stateful Diligence Harness** | `app.py` | Maintains `SESSION_STATE`, updates the **Investment Conviction Index (`0–100`)**, appends visual and verbal claims to `claim_ledger`, and audits visual-vs-verbal consistency. | FastAPI, `POST /api/interrogate`, `GET /api/state`, `POST /api/reset` |
-| **4. Deliverable Synthesis** | `app.py` & `.claude/skills/` | Generates the structured **IC Evaluation Memo** across 4 analytical rubric dimensions and compiles discovered discrepancies and guardrails into `.claude/skills/pitch-defense/SKILL.md`. | `POST /api/verdict`, `GET / POST /api/skill`, `_compile_skill_md()` |
+| **1. Client-Side Visual Ingestion** | `static/index.html`, `static/js/decks.js`, `static/js/voice.js`, `static/js/app.js` | Rasterizes multi-page PDFs and high-resolution slide images into `1280px` compressed JPEG frames in browser memory; captures voice dictation, manages provider telemetry, and instruments Google Analytics (`G-S90HKXEG0Z`). | `PDF.js v3.11`, HTML5 `<canvas>`, `SpeechRecognition`, `SpeechSynthesis`, `gtag.js` |
+| **2. Multimodal Extraction & Cross-Examination** | `engine.py` & `worker.js` | Assembles multimodal contents (`[image_part, prompt]`), routes inference to Gemma 4 via Google GenAI SDK / REST API or local open-weight runtimes, strips `<thought>` blocks, and measures exact round-trip latency (`ms`). | `google-genai` SDK, `Gemma4Router`, `callGeminiCascade()`, `/api/ping` |
+| **3. Stateful Diligence Harness** | `app.py` & `worker.js` | Maintains `SESSION_STATE`, updates the **Investment Conviction Index (`0–100`)**, appends visual and verbal claims to `claim_ledger`, and audits visual-vs-verbal consistency across FastAPI (local) and Cloudflare Workers (edge). | FastAPI, Cloudflare Workers ES Module (`worker.js`), `wrangler.toml` |
+| **4. Deliverable Synthesis** | `app.py`, `worker.js` & `.claude/skills/` | Generates the structured **IC Evaluation Memo** across 4 analytical rubric dimensions and compiles discovered discrepancies and guardrails into `.claude/skills/pitch-defense/SKILL.md`. | `POST /api/verdict`, `GET / POST /api/skill`, `_compile_skill_md()` |
 
 ---
 
@@ -164,9 +165,16 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables (`.env`)
-Copy `.env.example` to `.env` and provide your Google AI Studio `GEMINI_API_KEY` (and optional local Ollama / LM Studio settings):
+### 3. Configure Environment Variables (`.env` or Infisical Secret Sync)
+You can pull secrets directly from **Infisical** or copy `.env.example` to `.env`:
 ```bash
+# Option A: Pull secrets from Infisical into .env
+infisical export --format=dotenv > .env
+
+# Option B: Run FastAPI directly with Infisical injected environment variables
+infisical run -- uvicorn app:app --reload --host 0.0.0.0 --port 8000
+
+# Option C: Manual .env copy
 cp .env.example .env
 ```
 
@@ -193,12 +201,26 @@ python -m graphify update .
 GRAPHIFY_BACKEND=none graphify cluster-only .
 ```
 
+### 6. Cloudflare Workers Edge Deployment, Infisical Secret Sync & Observability (`https://hotseat-ai.ojasdeshpande.in/`)
+HotSeat AI includes a zero-dependency Cloudflare Workers edge runtime ([`worker.js`](./worker.js) & [`wrangler.toml`](./wrangler.toml)) deployed as Worker Script **`hotseatai-hackday-2026-gdg-vu`**. It serves `./static` via Cloudflare's `ASSETS` binding and executes the complete Gemma 4 multimodal API (`/health`, `/api/ping`, `/api/state`, `/api/reset`, `/api/interrogate`, `/api/verdict`, `/api/skill`) at the edge on **`https://hotseat-ai.ojasdeshpande.in/`**.
+
+- **Infisical → Cloudflare Workers Secret Sync Configuration:**
+  - **Worker Script Name / ID:** `hotseatai-hackday-2026-gdg-vu` (matches `name = "hotseatai-hackday-2026-gdg-vu"` in [`wrangler.toml`](./wrangler.toml) with `keep_vars = true` so synced Infisical secrets are never overwritten on deploy).
+  - **Entrypoint File:** `worker.js`
+  - *Note:* Ensure the Worker `hotseatai-hackday-2026-gdg-vu` has been created/deployed at least once on Cloudflare before creating the Infisical Cloudflare Workers Secret Sync so Infisical can discover the script via the Cloudflare API.
+- **Full Observability & Distributed Tracing (`wrangler.toml`):**
+  Configured with `head_sampling_rate = 1` (100% sampling) across `[observability]`, `[observability.logs]` (`invocation_logs = true`, `persist = true`), and `[observability.traces]` (`enabled = true`, `persist = true`), alongside Google Analytics (`gtag.js` `G-S90HKXEG0Z`) in [`static/index.html`](./static/index.html).
+- **Deploy to Cloudflare Workers:**
+  ```bash
+  npx wrangler deploy
+  ```
+
 ---
 
 ## 60-Second Judge Verification Guide
 
 1. **Select a Benchmark Deck or Upload a Custom Slide:**
-   Open **http://127.0.0.1:8000**, verify live Gemma 4 connectivity and millisecond latency in the top header bar, and click **Healthcare Deck** (or upload any custom `.pdf`, `.png`, or `.jpg` deck).
+   Open **[https://hotseat-ai.ojasdeshpande.in/](https://hotseat-ai.ojasdeshpande.in/)** (or **http://127.0.0.1:8000** locally), verify live Gemma 4 connectivity and millisecond latency in the top header bar, and click **Healthcare Deck** (or upload any custom `.pdf`, `.png`, or `.jpg` deck).
 2. **Execute Multimodal Visual Extraction:**
    Click **Present Current Slide to Partner**. Observe Gemma 4 Vision inspect the slide pixels, classify the sector (`Healthcare & Clinical Diagnostics`) and business model, extract the exact quantitative claims into the **Visual Document Extraction Panel**, and pose a formal partner inquiry.
 3. **Trigger Live Visual-vs-Verbal or Cross-Slide Discrepancy Detection:**
