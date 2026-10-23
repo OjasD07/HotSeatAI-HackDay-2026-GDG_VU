@@ -663,23 +663,47 @@ class Gemma4Router:
                 }
             try:
                 client = genai.Client(api_key=active_api_key)
-                start_t = time.time()
-                response = client.models.generate_content(
-                    model=model_id,
-                    contents='Respond only with {"ok": true}',
-                    config=types.GenerateContentConfig(
-                        temperature=0.0,
-                        max_output_tokens=16,
-                    ),
-                )
-                latency_ms = int((time.time() - start_t) * 1000)
-                _ = response.text
+                last_error: Optional[Exception] = None
+                for attempt in range(2):
+                    try:
+                        start_t = time.time()
+                        # Bounded ping: one SDK attempt, 20s hard timeout, plus
+                        # a single fast retry for transient 5xx/INTERNAL noise.
+                        response = client.models.generate_content(
+                            model=model_id,
+                            contents='Respond only with {"ok": true}',
+                            config=_gemma_timeout_config(20.0),
+                        )
+                        latency_ms = int((time.time() - start_t) * 1000)
+                        _ = response.text
+                        return {
+                            "provider": "gemini_api",
+                            "ok": True,
+                            "model_id": model_id,
+                            "latency_ms": latency_ms,
+                            "error": None,
+                        }
+                    except Exception as exc:
+                        last_error = exc
+                        elapsed = time.time() - start_t
+                        if (
+                            attempt == 0
+                            and elapsed <= _GEMMA_FAST_RETRY_THRESHOLD_SECONDS
+                            and _is_transient_gemma_error(exc)
+                        ):
+                            logger.warning(
+                                "Transient Gemini ping failure (%s); retrying once.",
+                                exc,
+                            )
+                            await asyncio.sleep(_GEMMA_RETRY_DELAY_SECONDS)
+                            continue
+                        break
                 return {
                     "provider": "gemini_api",
-                    "ok": True,
+                    "ok": False,
                     "model_id": model_id,
-                    "latency_ms": latency_ms,
-                    "error": None,
+                    "latency_ms": None,
+                    "error": f"Gemini API connection error: {last_error}",
                 }
             except Exception as exc:
                 return {

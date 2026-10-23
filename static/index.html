@@ -493,6 +493,81 @@
 
   </main>
 
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       FREE-TIER GEMINI API STARTUP NOTICE
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="startupNoticeOverlay"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+    role="dialog" aria-modal="true" aria-labelledby="startupNoticeTitle"
+    onclick="if (event.target === this) dismissStartupNotice()">
+    <div class="w-full max-w-lg inst-card p-5 shadow-2xl">
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 w-9 h-9 rounded-md bg-[#d97706]/15 border border-[#d97706]/50 flex items-center justify-center">
+          <span class="text-[#f59e0b] text-base font-bold">!</span>
+        </div>
+        <div class="min-w-0">
+          <h2 id="startupNoticeTitle" class="text-sm font-semibold text-white">
+            Free-Tier Gemini API Notice
+          </h2>
+          <p class="mt-1.5 text-xs text-slate-400 leading-relaxed">
+            This demo runs on the <span class="text-slate-200 font-medium">free tier</span> of the
+            Google Gemini API. Free-tier quotas are shared, so Gemini can intermittently return
+            <span class="font-mono-code text-rose-300">500 INTERNAL</span> or rate-limit errors.
+            The app retries once and then falls back across Gemma 4 models, but a turn may
+            occasionally be slow or unavailable.
+          </p>
+        </div>
+      </div>
+
+      <ul class="mt-4 space-y-2 text-xs text-slate-300 leading-relaxed">
+        <li class="flex gap-2">
+          <span class="text-[#3b82f6] font-mono-code">›</span>
+          <span>
+            For uninterrupted diligence, paste your own Gemini API key into
+            <span class="font-mono-code text-slate-100">API Key Override</span> in the header,
+            then run <span class="font-mono-code text-slate-100">Test Connection</span>.
+            Leave it empty to use the server's configured
+            <span class="font-mono-code text-slate-100">.env</span> key.
+          </span>
+        </li>
+        <li class="flex gap-2">
+          <span class="text-[#3b82f6] font-mono-code">›</span>
+          <span>
+            Create a free key at
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
+              class="text-[#60a5fa] underline decoration-[#60a5fa]/40 hover:text-white">
+              aistudio.google.com/app/apikey</a>.
+            Billing will be needed for higher quotas — see
+            <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener noreferrer"
+              class="text-[#60a5fa] underline decoration-[#60a5fa]/40 hover:text-white">
+              Google Cloud Billing</a>.
+          </span>
+        </li>
+        <li class="flex gap-2">
+          <span class="text-[#3b82f6] font-mono-code">›</span>
+          <span>
+            Prefer fully local inference? Switch <span class="font-mono-code text-slate-100">Engine</span>
+            to <span class="font-mono-code text-slate-100">Ollama</span> or
+            <span class="font-mono-code text-slate-100">LM Studio</span>.
+          </span>
+        </li>
+      </ul>
+
+      <p id="startupNoticeStatus" class="hidden mt-3 px-2.5 py-1.5 rounded bg-[#0b0d13] border border-[#1e2330] font-mono-code text-[11px] text-slate-300"></p>
+
+      <div class="mt-5 flex items-center justify-between gap-3">
+        <button onclick="dismissStartupNotice()"
+          class="btn-neutral px-3 py-1.5 rounded-md text-xs font-medium">
+          Continue to Demo
+        </button>
+        <button id="noticeTestConnBtn" onclick="testConnectionFromNotice()"
+          class="btn-royal px-3 py-1.5 rounded-md text-xs font-medium">
+          Test Connection
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modular Frontend Scripts -->
   <script src="./js/decks.js"></script>
   <script src="./js/voice.js"></script>

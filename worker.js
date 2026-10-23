@@ -892,32 +892,74 @@ async function pingProvider(provider, apiKey, env, ollamaModelOverride = '') {
       };
     }
     try {
-      const startT = Date.now();
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-        modelId
-      )}:generateContent?key=${encodeURIComponent(cfg.geminiApiKey)}`;
-      const resp = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          buildGemmaRequestBody(
-            [{ role: 'user', parts: [{ text: 'Respond only with {"ok": true}' }] }],
-            { temperature: 0.0, maxOutputTokens: 16 }
-          )
-        ),
-      });
-      const latencyMs = Date.now() - startT;
-      if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({}));
-        throw new Error(errBody?.error?.message || `HTTP ${resp.status}`);
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        const startT = Date.now();
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+            modelId
+          )}:generateContent?key=${encodeURIComponent(cfg.geminiApiKey)}`;
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(
+              buildGemmaRequestBody(
+                [{ role: 'user', parts: [{ text: 'Respond only with {"ok": true}' }] }],
+                { temperature: 0.0, maxOutputTokens: 16 }
+              )
+            ),
+            signal: controller.signal,
+          });
+          const latencyMs = Date.now() - startT;
+          if (!resp.ok) {
+            const errBody = await resp.json().catch(() => ({}));
+            throw new Error(errBody?.error?.message || `HTTP ${resp.status}`);
+          }
+          return {
+            provider: 'gemini_api',
+            ok: true,
+            model_id: modelId,
+            latency_ms: latencyMs,
+            error: null,
+          };
+        } catch (err) {
+          const elapsed = Date.now() - startT;
+          const timedOut = err?.name === 'AbortError';
+          const message = timedOut
+            ? `Gemma ping timed out after ${elapsed}ms`
+            : err.message || String(err);
+          // Bound the probe the same way as the dialogue cascade: one fast
+          // retry for transient 5xx/INTERNAL noise, never for a slow timeout.
+          if (
+            attempt === 0 &&
+            elapsed <= GEMMA_FAST_RETRY_THRESHOLD_MS &&
+            (timedOut || isTransientGemmaError(message))
+          ) {
+            console.warn(
+              JSON.stringify({
+                event: 'gemma4_ping_transient_retry',
+                model_id: modelId,
+                error: message,
+                retry_delay_ms: GEMMA_RETRY_DELAY_MS,
+              })
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, GEMMA_RETRY_DELAY_MS)
+            );
+            continue;
+          }
+          return {
+            provider: 'gemini_api',
+            ok: false,
+            model_id: modelId,
+            latency_ms: null,
+            error: `Gemini API connection error: ${message}`,
+          };
+        } finally {
+          clearTimeout(timeoutId);
+        }
       }
-      return {
-        provider: 'gemini_api',
-        ok: true,
-        model_id: modelId,
-        latency_ms: latencyMs,
-        error: null,
-      };
     } catch (err) {
       return {
         provider: 'gemini_api',

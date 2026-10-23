@@ -27,6 +27,80 @@ function hideConnectionError() {
   if (banner) banner.classList.add('hidden');
 }
 
+// ─── Free-Tier Gemini API Startup Notice ──────────────────────────────────
+function showStartupNotice() {
+  const overlay = document.getElementById('startupNoticeOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+  overlay.classList.add('flex');
+  document.getElementById('noticeTestConnBtn')?.focus();
+}
+
+function dismissStartupNotice() {
+  const overlay = document.getElementById('startupNoticeOverlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('flex');
+  }
+  try {
+    sessionStorage.setItem('hotseatStartupNoticeDismissed', '1');
+  } catch (_err) {
+    /* Storage can be unavailable in private/embedded contexts. */
+  }
+}
+
+function maybeShowStartupNotice() {
+  let dismissed = false;
+  try {
+    dismissed = sessionStorage.getItem('hotseatStartupNoticeDismissed') === '1';
+  } catch (_err) {
+    dismissed = false;
+  }
+  if (!dismissed) showStartupNotice();
+}
+
+async function testConnectionFromNotice() {
+  const btn = document.getElementById('noticeTestConnBtn');
+  const statusEl = document.getElementById('startupNoticeStatus');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Testing...';
+  }
+  if (statusEl) {
+    statusEl.classList.remove('hidden');
+    statusEl.className =
+      'mt-3 px-2.5 py-1.5 rounded bg-[#0b0d13] border border-[#1e2330] font-mono-code text-[11px] text-slate-300';
+    statusEl.textContent = 'Contacting provider endpoints...';
+  }
+
+  try {
+    await testAllConnections(true);
+    const provider = document.getElementById('providerSelect')?.value || 'gemini_api';
+    const status = cachedPingResults[provider];
+    if (!statusEl) return;
+    if (status?.ok) {
+      statusEl.className =
+        'mt-3 px-2.5 py-1.5 rounded bg-[#10b981]/10 border border-[#10b981]/50 font-mono-code text-[11px] text-[#10b981]';
+      statusEl.textContent = `Connected to ${status.model_id} in ${status.latency_ms} ms.`;
+    } else {
+      statusEl.className =
+        'mt-3 px-2.5 py-1.5 rounded bg-[#dc2626]/10 border border-[#dc2626]/50 font-mono-code text-[11px] text-rose-300';
+      statusEl.textContent = status?.error || 'Connection failed. Check the header telemetry.';
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Test Connection';
+    }
+  }
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  const overlay = document.getElementById('startupNoticeOverlay');
+  if (overlay && !overlay.classList.contains('hidden')) dismissStartupNotice();
+});
+
 function toggleProviderModelInput() {
   const provider = document.getElementById('providerSelect')?.value;
   const wrapper = document.getElementById('ollamaModelWrapper');
@@ -727,6 +801,7 @@ async function initializeApp() {
   if (isInitialized) return;
   isInitialized = true;
 
+  maybeShowStartupNotice();
   updatePersonaBadge();
   await loadSampleDeck('fintech', false);
   await testAllConnections(false);
