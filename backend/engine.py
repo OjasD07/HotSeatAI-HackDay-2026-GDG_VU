@@ -29,11 +29,13 @@ import time
 import urllib.error
 import urllib.request
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Optional
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(_PROJECT_ROOT / ".env", override=True)
 
 from google import genai
 from google.genai import types
@@ -596,7 +598,7 @@ class Gemma4Router:
         self._api_key: Optional[str] = api_key or _clean_env("GEMINI_API_KEY", "")
 
     def _resolve_api_key(self, api_key_override: Optional[str] = None) -> str:
-        load_dotenv(override=True)
+        load_dotenv(_PROJECT_ROOT / ".env", override=True)
         override_clean = str(api_key_override or "").strip().strip("\"'").strip()
         return override_clean or _clean_env("GEMINI_API_KEY", "") or (self._api_key or "").strip()
 

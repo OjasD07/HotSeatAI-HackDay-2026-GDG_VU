@@ -41,14 +41,14 @@ graph TD
         A3["Provider Connectivity Probe<br/>(GET / POST /api/ping)"]
     end
 
-    subgraph Stage2["2. Multimodal Extraction & Cross-Examination (engine.py)"]
+    subgraph Stage2["2. Multimodal Extraction & Cross-Examination (backend/engine.py)"]
         B1["Gemma4Router<br/>Multimodal Payload Assembly<br/>[Slide Image Part + Founder Statement + Claim Ledger]"]
         B2["Cloud Cascade: Google GenAI SDK<br/>gemma-4-26b-a4b-it → gemma-4-31b-it"]
         B3["Local Open-Weight Runtime<br/>Ollama (gemma4:12b) / LM Studio"]
         B4["extract_json_safely()<br/>3-Layer JSON Extraction & Telemetry"]
     end
 
-    subgraph Stage3["3. Stateful Diligence Harness (app.py)"]
+    subgraph Stage3["3. Stateful Diligence Harness (backend/app.py)"]
         C1["SESSION_STATE<br/>Investment Conviction Index (0–100)"]
         C2["Verified Session Claim Ledger<br/>[Slide X] Visual + [Founder Statement] Verbal"]
         C3["Discrepancy & Non-Disclosure Auditor<br/>Visual-vs-Verbal & Cross-Slide Verification"]
@@ -81,9 +81,41 @@ graph TD
 | Stage | Module | Primary Responsibility | Key Technical Primitives |
 | :--- | :--- | :--- | :--- |
 | **1. Client-Side Visual Ingestion** | `static/index.html`, `static/js/decks.js`, `static/js/voice.js`, `static/js/app.js` | Rasterizes multi-page PDFs and high-resolution slide images into `1280px` compressed JPEG frames in browser memory; captures voice dictation, manages provider telemetry, and instruments Google Analytics (`G-S90HKXEG0Z`). | `PDF.js v3.11`, HTML5 `<canvas>`, `SpeechRecognition`, `SpeechSynthesis`, `gtag.js` |
-| **2. Multimodal Extraction & Cross-Examination** | `engine.py` & `worker.js` | Sanitizes the full session transcript into Gemma's strict `user` → `model` schema (system prompts folded into the first user turn, failed/empty turns dropped, consecutive turns merged), appends the current slide image before the prompt text, routes inference to Gemma 4 via Google GenAI SDK / REST API or local open-weight runtimes, strips `<thought>` blocks, and measures exact round-trip latency (`ms`). | `google-genai` SDK, `Gemma4Router`, `_sanitize_gemini_contents()`, `callGeminiCascade()`, `sanitizeGeminiContents()`, `/api/ping` |
-| **3. Stateful Diligence Harness** | `app.py` & `worker.js` | Maintains `SESSION_STATE`, updates the **Investment Conviction Index (`0–100`)**, appends visual and verbal claims to `claim_ledger`, and audits visual-vs-verbal consistency across FastAPI (local) and Cloudflare Workers (edge). | FastAPI, Cloudflare Workers ES Module (`worker.js`), `wrangler.toml` |
-| **4. Deliverable Synthesis** | `app.py`, `worker.js` & `.claude/skills/` | Generates the structured **IC Evaluation Memo** across 4 analytical rubric dimensions and compiles discovered discrepancies and guardrails into `.claude/skills/pitch-defense/SKILL.md`. | `POST /api/verdict`, `GET / POST /api/skill`, `_compile_skill_md()` |
+| **2. Multimodal Extraction & Cross-Examination** | `backend/engine.py` & `worker.js` | Sanitizes the full session transcript into Gemma's strict `user` → `model` schema (system prompts folded into the first user turn, failed/empty turns dropped, consecutive turns merged), appends the current slide image before the prompt text, routes inference to Gemma 4 via Google GenAI SDK / REST API or local open-weight runtimes, strips `<thought>` blocks, and measures exact round-trip latency (`ms`). | `google-genai` SDK, `Gemma4Router`, `_sanitize_gemini_contents()`, `callGeminiCascade()`, `sanitizeGeminiContents()`, `/api/ping` |
+| **3. Stateful Diligence Harness** | `backend/app.py` & `worker.js` | Maintains `SESSION_STATE`, updates the **Investment Conviction Index (`0–100`)**, appends visual and verbal claims to `claim_ledger`, and audits visual-vs-verbal consistency across FastAPI (local) and Cloudflare Workers (edge). | FastAPI, Cloudflare Workers ES Module (`worker.js`), `wrangler.toml` |
+| **4. Deliverable Synthesis** | `backend/app.py`, `worker.js` & `.claude/skills/` | Generates the structured **IC Evaluation Memo** across 4 analytical rubric dimensions and compiles discovered discrepancies and guardrails into `.claude/skills/pitch-defense/SKILL.md`. | `POST /api/verdict`, `GET / POST /api/skill`, `_compile_skill_md()` |
+
+### Repository Layout
+
+```text
+.
+├── backend/                 # Python FastAPI diligence service
+│   ├── __init__.py          # Package marker
+│   ├── app.py               # HTTP endpoints, session state, prompt builders
+│   ├── engine.py            # Gemma 4 router, provider probes, sanitizers
+│   └── __main__.py          # `python -m backend` development entry point
+├── static/                  # Deployed UI (no build step)
+│   ├── index.html
+│   ├── css/styles.css
+│   └── js/{app,decks,voice}.js
+├── worker.js                # Cloudflare Workers parity runtime
+├── wrangler.toml            # Worker entry + static asset binding
+├── render.yaml              # Render start command + health check
+├── Dockerfile               # Container entry point
+├── requirements.txt         # Python dependencies
+├── package.json             # Wrangler scripts + Infisical launcher
+├── .claude/skills/          # Generated SKILL.md + Graphify skill
+├── graphify-out/            # Committed AST knowledge graph artifacts
+└── README.md
+```
+
+All three runtimes share the same `static/` frontend and API contract:
+
+| Runtime | Entry point | Command |
+| :--- | :--- | :--- |
+| Local / Render / Docker | `backend/app.py` | `uvicorn backend.app:app` |
+| Local convenience | `backend/__main__.py` | `python -m backend` |
+| Cloudflare Workers | `worker.js` | `npx wrangler deploy` |
 
 ---
 
@@ -107,13 +139,13 @@ graph TD
 
 | Track / Requirement | Implementation & Verification Artifact | Status |
 | :--- | :--- | :--- |
-| **Best Use of Gemma 4 (Gemini API)** | [`engine.py`](./engine.py) (`Gemma4Router._cloud_cascade`) sanitizes the live session transcript via `_build_gemma_contents()` and calls `client.models.generate_content(model="gemma-4-26b-a4b-it", contents=contents)` via `from google import genai` with cascade support to `gemma-4-31b-it`, `systemInstruction`/`tools`/`toolConfig`/`responseMimeType` stripping, and live millisecond latency telemetry in `#telemetryBadge`. | Verified |
+| **Best Use of Gemma 4 (Gemini API)** | [`backend/engine.py`](./backend/engine.py) (`Gemma4Router._cloud_cascade`) sanitizes the live session transcript via `_build_gemma_contents()` and calls `client.models.generate_content(model="gemma-4-26b-a4b-it", contents=contents)` via `from google import genai` with cascade support to `gemma-4-31b-it`, `systemInstruction`/`tools`/`toolConfig`/`responseMimeType` stripping, and live millisecond latency telemetry in `#telemetryBadge`. | Verified |
 | **Open-Source / Open-Weight AI** | Licensed under [`Apache-2.0`](./LICENSE); compliant with [Google Gemma Terms of Use](https://ai.google.dev/gemma/terms). Supports 100% local open-weight execution via Ollama (`OLLAMA_MODEL="gemma4:12b"`) and LM Studio without cloud fallback. | Verified |
-| **Agent Skills Open Standard (`SKILL.md`)** | [`.claude/skills/pitch-defense/SKILL.md`](./.claude/skills/pitch-defense/SKILL.md) is dynamically compiled and persisted on every diligence turn via `_persist_skill_md()` in [`app.py`](./app.py) and exportable from the UI. | Verified |
+| **Agent Skills Open Standard (`SKILL.md`)** | [`.claude/skills/pitch-defense/SKILL.md`](./.claude/skills/pitch-defense/SKILL.md) is dynamically compiled and persisted on every diligence turn via `_persist_skill_md()` in [`backend/app.py`](./backend/app.py) and exportable from the UI. | Verified |
 | **Sponsor Integration: Graphify AST Knowledge Graph** | Committed AST knowledge graph artifacts in [`graphify-out/`](./graphify-out/): [`GRAPH_REPORT.md`](./graphify-out/GRAPH_REPORT.md), [`graph.json`](./graphify-out/graph.json), and [`graph.html`](./graphify-out/graph.html), plus project skill [`.claude/skills/graphify/SKILL.md`](./.claude/skills/graphify/SKILL.md). | Verified |
 
 ### 1. Track: Best Use of Gemma 4 (via Gemini API)
-In [`engine.py`](./engine.py), `Gemma4Router` uses the official Google GenAI SDK (`google-genai>=1.0.0`). Multi-turn history is sanitized into Gemma's strict `user` → `model` schema before the current slide image and prompt are appended as the final `user` turn:
+In [`backend/engine.py`](./backend/engine.py), `Gemma4Router` uses the official Google GenAI SDK (`google-genai>=1.0.0`). Multi-turn history is sanitized into Gemma's strict `user` → `model` schema before the current slide image and prompt are appended as the final `user` turn:
 
 ```python
 import time
@@ -148,7 +180,7 @@ The Cloudflare Worker implements the same contract through `buildGemmaContents()
 ### 2. Track: Open-Source / Open-Weight AI & Agent Skills
 - **Repository License:** [`LICENSE`](./LICENSE) (`Apache-2.0`)
 - **Gemma Open-Weight Terms:** [Google Gemma Terms of Use](https://ai.google.dev/gemma/terms)
-- **Local Open-Weight Execution:** `Gemma4Router` in [`engine.py`](./engine.py) supports direct local execution against **Ollama** (`http://127.0.0.1:11434/api/chat`, default `OLLAMA_MODEL="gemma4:12b"`) and **LM Studio** (`http://127.0.0.1:1234/v1/chat/completions`).
+- **Local Open-Weight Execution:** `Gemma4Router` in [`backend/engine.py`](./backend/engine.py) supports direct local execution against **Ollama** (`http://127.0.0.1:11434/api/chat`, default `OLLAMA_MODEL="gemma4:12b"`) and **LM Studio** (`http://127.0.0.1:1234/v1/chat/completions`).
 - **Self-Improving Agent Skill Compiler:** Inspired by the Hermes self-improving agent loop and the Agent Skills Open Standard, every diligence turn synthesizes a reusable audit rule (`new_skill_guardrail`) and logs any discovered cross-slide contradictions into [`.claude/skills/pitch-defense/SKILL.md`](./.claude/skills/pitch-defense/SKILL.md).
 
 ### 3. Compulsory Sponsor Integration — Graphify Knowledge Graph
@@ -181,7 +213,7 @@ Copy `.env.example` to `.env` (for local execution) or add your variables direct
 cp .env.example .env
 ```
 
-All environment variables are resolved via `resolveEnvConfig()` in [`worker.js`](./worker.js) and `_clean_env()` in [`engine.py`](./engine.py) / [`app.py`](./app.py) with automatic quote-stripping and `||` fallback defaults:
+All environment variables are resolved via `resolveEnvConfig()` in [`worker.js`](./worker.js) and `_clean_env()` in [`backend/engine.py`](./backend/engine.py) / [`backend/app.py`](./backend/app.py) with automatic quote-stripping and `||` fallback defaults:
 
 | Variable | Default (`\|\|` Fallback) | Description |
 | :--- | :--- | :--- |
@@ -199,7 +231,7 @@ All environment variables are resolved via `resolveEnvConfig()` in [`worker.js`]
 
 ### 4. Start the FastAPI Diligence Server
 ```bash
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
+uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
 ```
 Open **http://127.0.0.1:8000** in your browser.
 

@@ -15,6 +15,7 @@ env/
 __pycache__/
 *.py
 *.pyc
+backend/
 worker.js
 wrangler.toml
 package.json

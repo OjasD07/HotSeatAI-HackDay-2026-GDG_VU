@@ -9,7 +9,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "env:pull": "infisical export --format=dotenv > .env",
-    "start:infisical": "infisical run -- uvicorn app:app --reload --host 0.0.0.0 --port 8000"
+    "start:infisical": "infisical run -- uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

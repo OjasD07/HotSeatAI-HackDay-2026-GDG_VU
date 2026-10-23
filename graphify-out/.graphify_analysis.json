@@ -1,57 +1,18 @@
 {
   "communities": {
     "0": [
-      "app",
-      "app_build_interrogation_prompt",
-      "app_build_verdict_prompt",
-      "app_clamp",
-      "app_compile_skill_md",
-      "app_get_ping",
-      "app_get_skill",
-      "app_get_state",
-      "app_health_check",
-      "app_interrogate",
-      "app_last_question_in_history",
-      "app_last_question_in_history_normalise",
-      "app_persist_skill_md",
-      "app_post_ping",
-      "app_post_skill",
-      "app_rationale_1",
-      "app_rationale_129",
-      "app_rationale_162",
-      "app_rationale_220",
-      "app_rationale_277",
-      "app_rationale_351",
-      "app_rationale_366",
-      "app_rationale_372",
-      "app_rationale_396",
-      "app_rationale_424",
-      "app_rationale_430",
-      "app_rationale_448",
-      "app_rationale_683",
-      "app_rationale_690",
-      "app_rationale_708",
-      "app_rationale_787",
-      "app_reset_state",
-      "app_verdict",
-      "copy",
+      "backend_app",
+      "backend_app_compile_skill_md",
+      "backend_app_get_skill",
+      "backend_app_rationale_1",
+      "backend_app_rationale_281",
+      "backend_app_rationale_687",
       "dotenv",
       "fastapi",
       "fastapi_middleware_cors",
       "fastapi_responses",
       "fastapi_staticfiles",
-      "get",
-      "jsonresponse",
-      "os",
-      "pathlib",
-      "plaintextresponse",
-      "post",
-      "readme_3_compulsory_sponsor_integration_graphify_knowledge_graph",
-      "readme_4_stage_cognitive_diligence_pipeline",
-      "readme_architectural_component_breakdown",
-      "readme_system_architecture",
-      "uploadfile",
-      "uvicorn"
+      "plaintextresponse"
     ],
     "1": [
       "static_js_app",
@@ -88,19 +49,15 @@
       "static_js_app_updatevisualclaims"
     ],
     "2": [
-      "any",
-      "engine_extract_gemma_parts",
-      "engine_is_failed_gemma_turn",
-      "engine_merge_gemma_parts",
-      "engine_normalise_gemma_role",
-      "engine_rationale_169",
-      "engine_rationale_177",
-      "engine_rationale_193",
-      "engine_rationale_259",
-      "engine_rationale_283",
-      "engine_rationale_482",
-      "engine_sanitize_gemini_contents",
-      "engine_session_history_to_messages"
+      "backend_app_persist_skill_md",
+      "backend_app_post_ping",
+      "backend_app_post_skill",
+      "backend_app_rationale_355",
+      "backend_app_rationale_400",
+      "backend_app_rationale_434",
+      "backend_app_rationale_694",
+      "backend_app_reset_state",
+      "post"
     ],
     "3": [
       "claude_skills_pitch_defense_skill",
@@ -112,6 +69,7 @@
       "readme_1_clone_the_repository_create_a_virtual_environment",
       "readme_2_install_dependencies",
       "readme_3_configure_environment_variables_env_cloudflare_secrets",
+      "readme_4_stage_cognitive_diligence_pipeline",
       "readme_4_start_the_fastapi_diligence_server",
       "readme_5_update_the_graphify_repository_knowledge_graph",
       "readme_60_second_judge_verification_guide",
@@ -121,11 +79,14 @@
       "readme_hotseat_ai",
       "readme_key_institutional_features",
       "readme_quickstart_local_setup_instructions",
+      "readme_repository_layout",
+      "readme_system_architecture",
       "readme_the_problem",
       "readme_the_solution"
     ],
     "4": [
       "readme_1_track_best_use_of_gemma_4_via_gemini_api",
+      "readme_architectural_component_breakdown",
       "worker",
       "worker_arraybuffertobase64",
       "worker_buildgemmacontents",
@@ -179,14 +140,16 @@
     ],
     "6": [
       "asyncio",
-      "engine",
-      "engine_extract_json_safely",
-      "engine_rationale_1",
-      "engine_rationale_538",
+      "backend_engine",
+      "backend_engine_extract_json_safely",
+      "backend_engine_rationale_1",
+      "backend_engine_rationale_540",
+      "copy",
       "google",
       "google_genai",
       "json",
       "logging",
+      "pathlib",
       "re",
       "time",
       "typing",
@@ -210,20 +173,14 @@
       "static_js_decks_wrapcanvastext"
     ],
     "8": [
-      "engine_clean_env",
-      "engine_gemma4router",
-      "engine_gemma4router_generate",
-      "engine_gemma4router_init",
-      "engine_gemma4router_lmstudio",
-      "engine_gemma4router_ollama",
-      "engine_gemma4router_ping_provider",
-      "engine_gemma4router_resolve_api_key",
-      "engine_rationale_1013",
-      "engine_rationale_587",
-      "engine_rationale_613",
-      "engine_rationale_652",
-      "engine_rationale_74",
-      "engine_rationale_943"
+      "backend_app_build_interrogation_prompt",
+      "backend_app_interrogate",
+      "backend_app_last_question_in_history",
+      "backend_app_last_question_in_history_normalise",
+      "backend_app_rationale_133",
+      "backend_app_rationale_166",
+      "backend_app_rationale_452",
+      "uploadfile"
     ],
     "9": [
       "static_js_voice",
@@ -240,54 +197,113 @@
       "claude_claude_graphify"
     ],
     "12": [
-      "engine_gemma_generation_config",
-      "engine_gemma_timeout_config",
-      "engine_rationale_499",
-      "engine_rationale_513",
+      "backend_engine_gemma_generation_config",
+      "backend_engine_gemma_timeout_config",
+      "backend_engine_rationale_501",
+      "backend_engine_rationale_515",
       "generatecontentconfig"
     ],
     "13": [
-      "base64",
-      "content",
-      "engine_normalise_inline_data",
-      "engine_rationale_135",
-      "engine_rationale_451",
-      "engine_to_genai_contents"
+      "backend_app_get_ping",
+      "backend_app_get_state",
+      "backend_app_health_check",
+      "backend_app_rationale_370",
+      "backend_app_rationale_376",
+      "backend_app_rationale_428",
+      "get",
+      "jsonresponse"
+    ],
+    "14": [
+      "backend_app_build_verdict_prompt",
+      "backend_app_clamp",
+      "backend_app_rationale_224",
+      "backend_app_rationale_712",
+      "backend_app_rationale_791",
+      "backend_app_verdict",
+      "readme_3_compulsory_sponsor_integration_graphify_knowledge_graph"
+    ],
+    "15": [
+      "backend_main",
+      "backend_main_main",
+      "backend_main_rationale_1",
+      "backend_main_rationale_11",
+      "os",
+      "uvicorn"
     ],
     "16": [
+      "any",
+      "backend_engine_build_gemma_contents",
+      "backend_engine_clean_env",
+      "backend_engine_extract_gemma_parts",
+      "backend_engine_gemma4router",
+      "backend_engine_gemma4router_cloud_cascade",
+      "backend_engine_gemma4router_generate",
+      "backend_engine_gemma4router_init",
+      "backend_engine_gemma4router_lmstudio",
+      "backend_engine_gemma4router_ollama",
+      "backend_engine_gemma4router_ping_provider",
+      "backend_engine_gemma4router_resolve_api_key",
+      "backend_engine_has_valid_image_payload",
+      "backend_engine_is_failed_gemma_turn",
+      "backend_engine_is_transient_gemma_error",
+      "backend_engine_merge_gemma_parts",
+      "backend_engine_normalise_gemma_role",
+      "backend_engine_normalise_inline_data",
+      "backend_engine_rationale_1015",
+      "backend_engine_rationale_118",
+      "backend_engine_rationale_124",
+      "backend_engine_rationale_137",
+      "backend_engine_rationale_171",
+      "backend_engine_rationale_179",
+      "backend_engine_rationale_195",
+      "backend_engine_rationale_261",
+      "backend_engine_rationale_285",
+      "backend_engine_rationale_394",
+      "backend_engine_rationale_453",
+      "backend_engine_rationale_484",
+      "backend_engine_rationale_589",
+      "backend_engine_rationale_615",
+      "backend_engine_rationale_654",
+      "backend_engine_rationale_76",
+      "backend_engine_rationale_808",
+      "backend_engine_rationale_945",
+      "backend_engine_sanitize_gemini_contents",
+      "backend_engine_session_history_to_messages",
+      "backend_engine_to_genai_contents",
+      "base64",
       "baseexception",
-      "engine_build_gemma_contents",
-      "engine_gemma4router_cloud_cascade",
-      "engine_has_valid_image_payload",
-      "engine_is_transient_gemma_error",
-      "engine_rationale_116",
-      "engine_rationale_122",
-      "engine_rationale_392",
-      "engine_rationale_806",
+      "content",
       "readme_2_track_open_source_open_weight_ai_agent_skills",
       "readme_hackathon_track_sponsor_compliance_disclosures"
+    ],
+    "17": [
+      "backend_init",
+      "backend_init_rationale_1"
     ]
   },
   "cohesion": {
-    "0": 0.058823529411764705,
+    "0": 0.18181818181818182,
     "1": 0.1693548387096774,
-    "2": 0.20512820512820512,
-    "3": 0.1,
-    "4": 0.12299465240641712,
+    "2": 0.25,
+    "3": 0.08695652173913043,
+    "4": 0.11932773109243698,
     "5": 0.13333333333333333,
-    "6": 0.16483516483516483,
+    "6": 0.14166666666666666,
     "7": 0.26373626373626374,
-    "8": 0.23076923076923078,
+    "8": 0.25,
     "9": 0.5,
     "10": 1.0,
     "11": 1.0,
     "12": 0.5,
-    "13": 0.3333333333333333,
-    "16": 0.2
+    "13": 0.32142857142857145,
+    "14": 0.2857142857142857,
+    "15": 0.4,
+    "16": 0.07716701902748414,
+    "17": 1.0
   },
   "gods": [
     {
-      "id": "engine_gemma4router",
+      "id": "backend_engine_gemma4router",
       "label": "Gemma4Router",
       "degree": 14
     },
@@ -297,17 +313,12 @@
       "degree": 14
     },
     {
-      "id": "app_interrogate",
-      "label": "interrogate()",
-      "degree": 10
-    },
-    {
       "id": "static_js_app_handleinterrogationresponse",
       "label": "handleInterrogationResponse()",
       "degree": 10
     },
     {
-      "id": "engine_sanitize_gemini_contents",
+      "id": "backend_engine_sanitize_gemini_contents",
       "label": "_sanitize_gemini_contents()",
       "degree": 10
     },
@@ -322,82 +333,87 @@
       "degree": 10
     },
     {
+      "id": "backend_app_interrogate",
+      "label": "interrogate()",
+      "degree": 10
+    },
+    {
       "id": "static_js_app_testallconnections",
       "label": "testAllConnections()",
       "degree": 9
     },
     {
-      "id": "engine_build_gemma_contents",
+      "id": "backend_engine_build_gemma_contents",
       "label": "_build_gemma_contents()",
       "degree": 9
     },
     {
-      "id": "engine_extract_json_safely",
-      "label": "extract_json_safely()",
+      "id": "backend_engine_clean_env",
+      "label": "_clean_env()",
       "degree": 9
     }
   ],
   "surprises": [
     {
-      "source": "2. Track: Open-Source / Open-Weight AI & Agent Skills",
-      "target": "Gemma4Router",
-      "source_files": [
-        "README.md",
-        "engine.py"
-      ],
-      "confidence": "INFERRED",
-      "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities; peripheral node `2. Track: Open-Source / Open-Weight AI & Agent Skills` unexpectedly reaches hub `Gemma4Router`"
-    },
-    {
-      "source": "6. Cloudflare Workers Edge Deployment & Observability (`https://hotseat-ai.ojasdeshpande.in/`)",
-      "target": "resolveEnvConfig()",
-      "source_files": [
-        "README.md",
-        "worker.js"
-      ],
-      "confidence": "INFERRED",
-      "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities; peripheral node `6. Cloudflare Workers Edge Deployment & Observability (`https://hotseat-ai.ojasdeshpande.in/`)` unexpectedly reaches hub `resolveEnvConfig()`"
-    },
-    {
       "source": "1. Track: Best Use of Gemma 4 (via Gemini API)",
       "target": "Gemma4Router",
       "source_files": [
         "README.md",
-        "engine.py"
+        "backend/engine.py"
       ],
       "confidence": "INFERRED",
       "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "2. Track: Open-Source / Open-Weight AI & Agent Skills",
+      "target": "Gemma4Router",
+      "source_files": [
+        "README.md",
+        "backend/engine.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "references",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); connects across different repos/directories; peripheral node `2. Track: Open-Source / Open-Weight AI & Agent Skills` unexpectedly reaches hub `Gemma4Router`"
     },
     {
       "source": "3. Compulsory Sponsor Integration — Graphify Knowledge Graph",
       "target": "Gemma4Router",
       "source_files": [
         "README.md",
-        "engine.py"
+        "backend/engine.py"
       ],
       "confidence": "INFERRED",
       "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); connects across different repos/directories; bridges separate communities"
     },
     {
       "source": "Architectural Component Breakdown",
       "target": "Gemma4Router",
       "source_files": [
         "README.md",
-        "engine.py"
+        "backend/engine.py"
       ],
       "confidence": "INFERRED",
       "relation": "references",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); bridges separate communities"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "Architectural Component Breakdown",
+      "target": "_compile_skill_md()",
+      "source_files": [
+        "README.md",
+        "backend/app.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "references",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); connects across different repos/directories; bridges separate communities"
     }
   ],
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `Gemma4Router` connect `Gemma4Router` to `app.py`, `._cloud_cascade`, `decks.js`, `HotSeat AI`?",
+      "question": "Why does `Gemma4Router` connect `Any` to `app.py`, `decks.js`, `HotSeat AI`, `verdict`?",
       "why": "High betweenness centrality (0.108) - this node is a cross-community bridge."
     },
     {
@@ -412,23 +428,23 @@
     },
     {
       "type": "low_cohesion",
-      "question": "Should `app.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected."
+      "question": "Should `app.js` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `Architectural Component Breakdown` connect `app.py` to `Gemma4Router`, `Any`, `decks.js`?",
-      "why": "High betweenness centrality (0.085) - this node is a cross-community bridge."
+      "question": "Why does `Architectural Component Breakdown` connect `decks.js` to `app.py`, `Any`, `app.js`?",
+      "why": "High betweenness centrality (0.087) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 2 inferred relationships involving `_sanitize_gemini_contents()` (e.g. with `Architectural Component Breakdown` and `Key Institutional Features`) actually correct?",
+      "why": "`_sanitize_gemini_contents()` has 2 INFERRED edges - model-reasoned connections that need verification."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `app.js` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.1 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `HotSeat AI` connect `app.js` to `._cloud_cascade`, `app.py`?",
-      "why": "High betweenness centrality (0.077) - this node is a cross-community bridge."
+      "question": "Should `decks.js` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.11932773109243698 - nodes in this community are weakly interconnected."
     }
   ]
 }

@@ -3,7 +3,7 @@
  * ===================================================================================
  *
  * Serves static assets from `./static` via `env.ASSETS` and provides full edge
- * API parity with `app.py` & `engine.py` using live Gemma 4 multimodal inference
+ * API parity with `backend/app.py` & `backend/engine.py` using live Gemma 4 multimodal inference
  * (`gemma-4-26b-a4b-it` → `gemma-4-31b-it`), structured observability logs, and
  * distributed tracing.
  */

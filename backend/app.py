@@ -26,14 +26,18 @@ from typing import Any, Optional
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+# Anchor every filesystem lookup to the repository root so the server behaves
+# identically whether it is launched from the root or from another directory.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_STATIC_DIR = _PROJECT_ROOT / "static"
+load_dotenv(_PROJECT_ROOT / ".env", override=True)
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
-from engine import Gemma4Router
+from backend.engine import Gemma4Router
 
 # ─── Logging ────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -118,7 +122,7 @@ app.add_middleware(
 router = Gemma4Router()
 _MAX_LEDGER_IN_PROMPT = 25
 
-_SKILL_DIR = Path(".claude/skills/pitch-defense")
+_SKILL_DIR = _PROJECT_ROOT / ".claude" / "skills" / "pitch-defense"
 _SKILL_PATH = _SKILL_DIR / "SKILL.md"
 
 
@@ -791,8 +795,8 @@ def _clamp(value: int, lo: int, hi: int) -> int:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  Static Files Mount  (MUST be last — catch-all for the SPA frontend)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Path("static").mkdir(exist_ok=True)
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+_STATIC_DIR.mkdir(exist_ok=True)
+app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -804,4 +808,4 @@ if __name__ == "__main__":
 
     host = (os.environ.get("HOST") or "0.0.0.0").strip().strip("\"'") or "0.0.0.0"
     port = int((os.environ.get("PORT") or "8000").strip().strip("\"'") or "8000")
-    uvicorn.run("app:app", host=host, port=port, reload=True)
+    uvicorn.run("backend.app:app", host=host, port=port, reload=True)
