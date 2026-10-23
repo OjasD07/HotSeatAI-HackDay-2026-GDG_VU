@@ -1,0 +1,92 @@
+{
+  ".claude/settings.json": {
+    "mtime": 1792659036.0328236,
+    "seen": 1792659063.864209,
+    "ast_hash": "3b541b9935fcf0831355da956f897645",
+    "semantic_hash": "3b541b9935fcf0831355da956f897645"
+  },
+  "app.py": {
+    "mtime": 1792769156.9256644,
+    "seen": 1792769271.323066,
+    "ast_hash": "2cee3d6575ddac4459c141baa67da698",
+    "semantic_hash": ""
+  },
+  "engine.py": {
+    "mtime": 1792768940.144171,
+    "seen": 1792769271.323068,
+    "ast_hash": "ca841318c2aaccbc327fba5676c6e5f3",
+    "semantic_hash": ""
+  },
+  ".claude/CLAUDE.md": {
+    "mtime": 1792659036.0317078,
+    "seen": 1792661673.057792,
+    "ast_hash": "9b31786b637be3c13978bec4c2330752",
+    "semantic_hash": ""
+  },
+  ".claude/skills/pitch-defense/SKILL.md": {
+    "mtime": 1792766557.7863796,
+    "seen": 1792766717.211595,
+    "ast_hash": "48818cad19fe7ec8f0d30392c66b576f",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1792659036.0326183,
+    "seen": 1792661673.057794,
+    "ast_hash": "67d88e9d0760c3ba54c75dfd9551c1c5",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1792768610.05419,
+    "seen": 1792769271.3230772,
+    "ast_hash": "2245b0e860c4305155ea949c38805e2f",
+    "semantic_hash": ""
+  },
+  "render.yaml": {
+    "mtime": 1792658973.3937461,
+    "seen": 1792661673.057795,
+    "ast_hash": "02151a442087a528cb16d1a5926f6ebd",
+    "semantic_hash": ""
+  },
+  "requirements.txt": {
+    "mtime": 1792660450.799417,
+    "seen": 1792661673.057796,
+    "ast_hash": "dd3ae86c0b70bafe4616f99e463f433e",
+    "semantic_hash": ""
+  },
+  "static/index.html": {
+    "mtime": 1792669978.196242,
+    "seen": 1792670118.578943,
+    "ast_hash": "b44395cfcc0edf5932d0ca8b5372858c",
+    "semantic_hash": ""
+  },
+  "static/js/app.js": {
+    "mtime": 1792668984.3055375,
+    "seen": 1792671418.513684,
+    "ast_hash": "9a0fbb14eb77d6bffc0857b870cecb0a",
+    "semantic_hash": "9a0fbb14eb77d6bffc0857b870cecb0a"
+  },
+  "static/js/decks.js": {
+    "mtime": 1792668708.8225272,
+    "seen": 1792671418.513684,
+    "ast_hash": "4bfe7b3e5bb6516b04df52f4332a6154",
+    "semantic_hash": "4bfe7b3e5bb6516b04df52f4332a6154"
+  },
+  "static/js/voice.js": {
+    "mtime": 1792668716.542806,
+    "seen": 1792766511.767974,
+    "ast_hash": "c3098748eaee95c19622737eb06c1185",
+    "semantic_hash": "c3098748eaee95c19622737eb06c1185"
+  },
+  "package.json": {
+    "mtime": 1792670189.6160223,
+    "seen": 1792671418.5136828,
+    "ast_hash": "f2b685148fb1571b40b2f2c9ddb0c965",
+    "semantic_hash": "f2b685148fb1571b40b2f2c9ddb0c965"
+  },
+  "worker.js": {
+    "mtime": 1792769159.596369,
+    "seen": 1792769271.323074,
+    "ast_hash": "08d5e98379eeca7d3e5091bb791b50b4",
+    "semantic_hash": ""
+  }
+}

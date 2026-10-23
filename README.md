@@ -81,7 +81,7 @@ graph TD
 | Stage | Module | Primary Responsibility | Key Technical Primitives |
 | :--- | :--- | :--- | :--- |
 | **1. Client-Side Visual Ingestion** | `static/index.html`, `static/js/decks.js`, `static/js/voice.js`, `static/js/app.js` | Rasterizes multi-page PDFs and high-resolution slide images into `1280px` compressed JPEG frames in browser memory; captures voice dictation, manages provider telemetry, and instruments Google Analytics (`G-S90HKXEG0Z`). | `PDF.js v3.11`, HTML5 `<canvas>`, `SpeechRecognition`, `SpeechSynthesis`, `gtag.js` |
-| **2. Multimodal Extraction & Cross-Examination** | `engine.py` & `worker.js` | Assembles multimodal contents (`[image_part, prompt]`), routes inference to Gemma 4 via Google GenAI SDK / REST API or local open-weight runtimes, strips `<thought>` blocks, and measures exact round-trip latency (`ms`). | `google-genai` SDK, `Gemma4Router`, `callGeminiCascade()`, `/api/ping` |
+| **2. Multimodal Extraction & Cross-Examination** | `engine.py` & `worker.js` | Sanitizes the full session transcript into Gemma's strict `user` → `model` schema (system prompts folded into the first user turn, failed/empty turns dropped, consecutive turns merged), appends the current slide image before the prompt text, routes inference to Gemma 4 via Google GenAI SDK / REST API or local open-weight runtimes, strips `<thought>` blocks, and measures exact round-trip latency (`ms`). | `google-genai` SDK, `Gemma4Router`, `_sanitize_gemini_contents()`, `callGeminiCascade()`, `sanitizeGeminiContents()`, `/api/ping` |
 | **3. Stateful Diligence Harness** | `app.py` & `worker.js` | Maintains `SESSION_STATE`, updates the **Investment Conviction Index (`0–100`)**, appends visual and verbal claims to `claim_ledger`, and audits visual-vs-verbal consistency across FastAPI (local) and Cloudflare Workers (edge). | FastAPI, Cloudflare Workers ES Module (`worker.js`), `wrangler.toml` |
 | **4. Deliverable Synthesis** | `app.py`, `worker.js` & `.claude/skills/` | Generates the structured **IC Evaluation Memo** across 4 analytical rubric dimensions and compiles discovered discrepancies and guardrails into `.claude/skills/pitch-defense/SKILL.md`. | `POST /api/verdict`, `GET / POST /api/skill`, `_compile_skill_md()` |
 
@@ -97,6 +97,7 @@ graph TD
   - *Enterprise Procurement Lead (Security & ROI)* — Probes regulatory compliance, deployment friction, switching costs, and auditable customer ROI.
   - *Technical Diligence Partner (Architecture & Defensibility)* — Examines system architecture, clinical/engineering validation cohorts, and unit compute/production costs.
 - **Built-In Multi-Industry Benchmark Decks:** Includes 3 instant 3-slide benchmark decks (**FinTech Deck**, **Healthcare Deck**, **D2C Retail Deck**) rendered directly on `#slideCanvas` with intentional cross-slide financial and operational discrepancies for immediate verification, alongside custom `.pdf`, `.png`, `.jpg`, and `.webp` upload support.
+- **Strict Gemma Multi-Turn Contract:** Every follow-up turn replays the live diligence transcript through a dedicated sanitizer (`_sanitize_gemini_contents()` / `sanitizeGeminiContents()`): the history is deep-cloned so live session state is never mutated, `assistant` is remapped to `model`, system messages are folded into the first `user` turn, failed/error/empty turns are dropped, consecutive same-role turns are merged, and the payload always starts and ends with `user`. History is capped to the most recent 10 turns, prior-turn `inlineData` images are stripped so the slide is sent exactly once, and the last partner question is not repeated in the user prompt when it is already the immediately preceding `model` turn. Unsupported Gemma config keys (`systemInstruction`, `tools`, `toolConfig`, `responseMimeType`) are stripped before every request. Transient `500 INTERNAL` responses receive a single 350ms-delayed retry, and per-attempt/total timeout budgets keep the primary, retry, and fallback cascade inside Cloudflare's 100s gateway window.
 - **Live Provider Telemetry & Diagnostics:** Probes connection health and round-trip latency (`ms`) across **Google Gemini API (`gemma-4-26b-a4b-it`)**, **Local Ollama (`gemma4:12b`)**, and **LM Studio (`gemma-4-12b-it`)**, displaying real-time model and latency telemetry in the institutional header bar.
 
 ---
@@ -105,35 +106,43 @@ graph TD
 
 | Track / Requirement | Implementation & Verification Artifact | Status |
 | :--- | :--- | :--- |
-| **Best Use of Gemma 4 (Gemini API)** | [`engine.py`](./engine.py) (`Gemma4Router._cloud_cascade`) calls `client.models.generate_content(model="gemma-4-26b-a4b-it", contents=[image_part, prompt])` via `from google import genai` with cascade support to `gemma-4-31b-it` and live millisecond latency telemetry in `#telemetryBadge`. | Verified |
+| **Best Use of Gemma 4 (Gemini API)** | [`engine.py`](./engine.py) (`Gemma4Router._cloud_cascade`) sanitizes the live session transcript via `_build_gemma_contents()` and calls `client.models.generate_content(model="gemma-4-26b-a4b-it", contents=contents)` via `from google import genai` with cascade support to `gemma-4-31b-it`, `systemInstruction`/`tools`/`toolConfig`/`responseMimeType` stripping, and live millisecond latency telemetry in `#telemetryBadge`. | Verified |
 | **Open-Source / Open-Weight AI** | Licensed under [`Apache-2.0`](./LICENSE); compliant with [Google Gemma Terms of Use](https://ai.google.dev/gemma/terms). Supports 100% local open-weight execution via Ollama (`OLLAMA_MODEL="gemma4:12b"`) and LM Studio without cloud fallback. | Verified |
 | **Agent Skills Open Standard (`SKILL.md`)** | [`.claude/skills/pitch-defense/SKILL.md`](./.claude/skills/pitch-defense/SKILL.md) is dynamically compiled and persisted on every diligence turn via `_persist_skill_md()` in [`app.py`](./app.py) and exportable from the UI. | Verified |
 | **Sponsor Integration: Graphify AST Knowledge Graph** | Committed AST knowledge graph artifacts in [`graphify-out/`](./graphify-out/): [`GRAPH_REPORT.md`](./graphify-out/GRAPH_REPORT.md), [`graph.json`](./graphify-out/graph.json), and [`graph.html`](./graphify-out/graph.html), plus project skill [`.claude/skills/graphify/SKILL.md`](./.claude/skills/graphify/SKILL.md). | Verified |
 
 ### 1. Track: Best Use of Gemma 4 (via Gemini API)
-In [`engine.py`](./engine.py), `Gemma4Router` uses the official Google GenAI SDK (`google-genai>=1.0.0`) with Gemma 4's required multimodal part ordering (image bytes placed before text prompt):
+In [`engine.py`](./engine.py), `Gemma4Router` uses the official Google GenAI SDK (`google-genai>=1.0.0`). Multi-turn history is sanitized into Gemma's strict `user` → `model` schema before the current slide image and prompt are appended as the final `user` turn:
 
 ```python
 import time
+
 from google import genai
-from google.genai import types
 
 client = genai.Client(api_key=active_api_key)
-start_t = time.time()
-contents = []
-if image_bytes:
-    contents.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
-contents.append(prompt)
 
+# 1. Sanitize stored history: assistant → model, system → first user,
+#    drop failed/empty turns, merge consecutive same-role turns.
+turns = _build_gemma_contents(
+    _session_history_to_messages(history),
+    prompt,
+    image_bytes,
+    mime_type,
+)
+contents = _to_genai_contents(turns)  # image parts precede text
+
+# 2. Gemma-safe config: no systemInstruction, tools, toolConfig,
+#    or responseMimeType.
+start_t = time.time()
 response = client.models.generate_content(
     model=model_id,  # Default: "gemma-4-26b-a4b-it", cascade to "gemma-4-31b-it"
     contents=contents,
-    config=types.GenerateContentConfig(
-        temperature=0.3,
-    ),
+    config=_gemma_generation_config(),
 )
 latency_ms = int((time.time() - start_t) * 1000)
 ```
+
+The Cloudflare Worker implements the same contract through `buildGemmaContents()`, `sanitizeGeminiContents()`, and `buildGemmaRequestBody()` in [`worker.js`](./worker.js).
 
 ### 2. Track: Open-Source / Open-Weight AI & Agent Skills
 - **Repository License:** [`LICENSE`](./LICENSE) (`Apache-2.0`)

@@ -125,6 +125,30 @@ _SKILL_PATH = _SKILL_DIR / "SKILL.md"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  Prompt Builders (100% Dynamic — Zero Canned Responses)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+def _last_question_in_history(last_vc_question: str) -> bool:
+    """True when the prior partner turn already carries the last question.
+
+    The multi-turn payload replays that turn as `model`, so repeating the full
+    text inside the new user prompt would only duplicate context and tokens.
+    """
+    question = str(last_vc_question or "").strip()
+    history = SESSION_STATE.get("history") or []
+    if not question or not history:
+        return False
+
+    last_turn = history[-1]
+    if not isinstance(last_turn, dict):
+        return False
+    prior_response = str(last_turn.get("vc_spoken_response") or "").strip()
+    if not prior_response:
+        return False
+
+    def normalise(value: Any) -> str:
+        return " ".join(str(value).split()).lower()
+
+    return normalise(question) in normalise(prior_response)
+
+
 def _build_interrogation_prompt(
     persona_key: str,
     slide_number: int,
@@ -133,10 +157,24 @@ def _build_interrogation_prompt(
     claim_ledger: list[dict],
     has_image: bool,
     evasion_hint: bool,
+    last_question_in_history: bool = False,
 ) -> str:
     """Build the live multimodal institutional diligence prompt for Gemma 4."""
     recent_claims = claim_ledger[-_MAX_LEDGER_IN_PROMPT:]
     claim_ledger_json = json.dumps(recent_claims, indent=2) if recent_claims else "[]"
+
+    # The multi-turn contents already carry the prior partner question as the
+    # immediately preceding `model` turn. Do not duplicate it inside the user
+    # text prompt; keep the explicit quote only as a no-history fallback.
+    if last_question_in_history and str(last_vc_question or "").strip():
+        previous_inquiry_block = (
+            "4. Previous Inquiry Asked by Partner: See the immediately "
+            "preceding partner turn; assess whether it was answered directly."
+        )
+    else:
+        previous_inquiry_block = (
+            f'4. Previous Inquiry Asked by Partner: "{last_vc_question}"'
+        )
 
     prompt = f"""You are a Senior Managing Partner at an institutional Venture Capital firm conducting formal due diligence on a startup pitch.
 Maintain a composed, analytical, professional, and rigorous tone at all times. Never use slang, internet memes, "roast" language, or casual insults.
@@ -145,7 +183,7 @@ INPUTS PROVIDED TO YOU:
 1. Attached Slide Image: The presentation slide currently displayed on screen by the founder.
 2. Founder's Verbal/Written Statement: "{user_message}"
 3. Prior Session Claim Ledger (from earlier slides/turns in this session only): {claim_ledger_json}
-4. Previous Inquiry Asked by Partner: "{last_vc_question}"
+{previous_inquiry_block}
 
 YOUR ANALYTICAL MANDATE:
 1. INSPECT THE SLIDE IMAGE DIRECTLY: Read the exact title, sector, metrics, charts, and claims shown visually on the attached slide image.
@@ -440,6 +478,7 @@ async def interrogate(
         claim_ledger=SESSION_STATE["claim_ledger"],
         has_image=image_bytes is not None,
         evasion_hint=evasion_hint,
+        last_question_in_history=_last_question_in_history(last_q),
     )
 
     try:
@@ -450,6 +489,7 @@ async def interrogate(
             provider=provider,
             api_key_override=api_key if api_key else None,
             ollama_model_override=ollama_model if ollama_model else None,
+            history=SESSION_STATE["history"],
         )
     except Exception as exc:
         logger.error("Live Gemma 4 interrogation failed: %s", exc)

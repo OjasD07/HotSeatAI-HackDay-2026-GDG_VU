@@ -12,6 +12,15 @@ const CLOUD_CASCADE = ['gemma-4-26b-a4b-it', 'gemma-4-31b-it'];
 const DEFAULT_TEMPERATURE = 0.3;
 const MAX_LEDGER_IN_PROMPT = 25;
 
+// Keep the final `contents` payload bounded and leave enough of Cloudflare's
+// 100s gateway window for the fallback model to run after a primary failure.
+const MAX_GEMMA_HISTORY_TURNS = 10;
+const GEMMA_TOTAL_BUDGET_MS = 92000;
+const GEMMA_REQUEST_TIMEOUT_MS = 70000;
+const GEMMA_MIN_ATTEMPT_MS = 8000;
+const GEMMA_RETRY_DELAY_MS = 350;
+const GEMMA_FAST_RETRY_THRESHOLD_MS = 15000;
+
 const INITIAL_STATE = {
   conviction_score: 50,
   discrepancy_count: 0,
@@ -117,6 +126,377 @@ function arrayBufferToBase64(buffer) {
   return btoa(binary);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Gemma 4 Conversation Sanitizer (Gemini `v1beta` `contents` contract)
+// ─────────────────────────────────────────────────────────────────────────────
+// Gemma endpoints accept only `user` and `model` roles, reject a top-level
+// `systemInstruction`, and reject `tools`, `toolConfig`, and `responseMimeType`.
+// The helpers below normalise any dialogue history into a strictly alternating
+// `user` → `model` sequence before every request.
+const GEMMA_SYSTEM_ROLES = new Set(['system', 'developer']);
+const GEMMA_FORBIDDEN_CONFIG_KEYS = new Set([
+  'systemInstruction',
+  'system_instruction',
+  'tools',
+  'toolConfig',
+  'tool_config',
+  'responseMimeType',
+  'response_mime_type',
+  'responseSchema',
+  'response_schema',
+]);
+
+function normaliseGemmaRole(role) {
+  const value = String(role || '').trim().toLowerCase();
+  return value === 'assistant' || value === 'model' ? 'model' : 'user';
+}
+
+function isFailedGemmaTurn(message) {
+  if (!message || typeof message !== 'object') return false;
+  if (message.error) return true;
+  if (message.failed === true) return true;
+  if (message.ok === false) return true;
+  const role = String(message.role || '').trim().toLowerCase();
+  return role === 'error' || role === 'tool' || role === 'function';
+}
+
+/**
+ * Deep-clone payload inputs so folding/merging can never mutate live session
+ * history. Falls back to JSON cloning for environments without structuredClone.
+ */
+function deepCloneForPayload(value) {
+  try {
+    return structuredClone(value);
+  } catch (_err) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (_jsonErr) {
+      return Array.isArray(value) ? value.slice() : value;
+    }
+  }
+}
+
+function hasValidImagePayload(value) {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (value instanceof ArrayBuffer) return value.byteLength > 0;
+  if (ArrayBuffer.isView(value)) return value.byteLength > 0;
+  return false;
+}
+
+/**
+ * Return a valid inline-data object, or null for null/empty/malformed images.
+ * This guard is what keeps Turn 0 text-only chat free of empty image parts.
+ */
+function normaliseInlineData(inline) {
+  if (!inline || typeof inline !== 'object') return null;
+
+  let data = inline.data;
+  const mimeRaw = inline.mime_type || inline.mimeType;
+
+  if (typeof data === 'string') {
+    if (!data.trim()) return null;
+  } else if (data instanceof ArrayBuffer) {
+    if (data.byteLength === 0) return null;
+    data = arrayBufferToBase64(data);
+  } else if (ArrayBuffer.isView(data)) {
+    if (data.byteLength === 0) return null;
+    data = arrayBufferToBase64(
+      data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+    );
+  } else {
+    return null;
+  }
+
+  const mime =
+    typeof mimeRaw === 'string' &&
+    mimeRaw.trim().toLowerCase().startsWith('image/')
+      ? mimeRaw.trim()
+      : 'image/jpeg';
+
+  return { mime_type: mime, data };
+}
+
+function extractGemmaParts(message, includeMedia = true) {
+  if (message === null || message === undefined) return [];
+  if (typeof message === 'string') {
+    const text = message.trim();
+    return text ? [{ text }] : [];
+  }
+  if (Array.isArray(message)) {
+    return message.flatMap((item) => extractGemmaParts(item, includeMedia));
+  }
+
+  let rawParts;
+  if (typeof message === 'object') {
+    rawParts = message.parts ?? message.content ?? message.text;
+  }
+  if (rawParts === undefined || rawParts === null) return [];
+  if (!Array.isArray(rawParts)) rawParts = [rawParts];
+
+  const parts = [];
+  for (const item of rawParts) {
+    if (item === null || item === undefined) continue;
+    if (typeof item === 'string') {
+      const text = item.trim();
+      if (text) parts.push({ text });
+      continue;
+    }
+    if (typeof item === 'object') {
+      if (typeof item.text === 'string' && item.text.trim()) {
+        parts.push({ text: item.text.trim() });
+      }
+      if (includeMedia) {
+        const inline = normaliseInlineData(item.inline_data || item.inlineData);
+        if (inline) parts.push({ inline_data: inline });
+      }
+    }
+  }
+  return parts;
+}
+
+function mergeGemmaParts(...groups) {
+  const combined = groups.flat();
+  const media = combined.filter((part) => part && part.inline_data);
+  const others = combined.filter(
+    (part) => part && !part.inline_data && !part.text
+  );
+  const texts = combined
+    .filter((part) => part && part.text && String(part.text).trim())
+    .map((part) => String(part.text).trim());
+
+  const merged = [...media, ...others];
+  if (texts.length) merged.push({ text: texts.join('\n\n') });
+  return merged;
+}
+
+function isTransientGemmaError(err) {
+  const text = String(err?.message || err || '').toLowerCase();
+  return (
+    text.includes('internal error') ||
+    text.includes('internal') ||
+    text.includes('unavailable') ||
+    text.includes('overloaded') ||
+    text.includes('deadline exceeded') ||
+    text.includes('timed out') ||
+    text.includes('timeout') ||
+    text.includes('try again') ||
+    text.includes('http 500') ||
+    text.includes('http 502') ||
+    text.includes('http 503') ||
+    text.includes('http 504')
+  );
+}
+
+/**
+ * Normalise any message history into Gemma's strict `user`/`model` schema.
+ * - Deep-clones history so live `SESSION_STATE.history` is never mutated.
+ * - Remaps `assistant` → `model`.
+ * - Folds `system` / `developer` messages into the first `user` turn.
+ * - Drops failed, error, empty, tool, and function turns.
+ * - Merges consecutive turns that resolve to the same role.
+ * - Caps history to the most recent `MAX_GEMMA_HISTORY_TURNS` turns.
+ * - Guarantees the sequence starts with a `user` turn.
+ * `includeMedia` defaults to false so prior-turn images are stripped. The
+ * caller appends the current user turn, guaranteeing the final payload also
+ * ends with the latest `user` turn.
+ */
+function sanitizeGeminiContents(
+  messages = [],
+  systemPrompt = '',
+  includeMedia = false
+) {
+  let turns = [];
+  const systemChunks = [];
+  const rawMessageList = Array.isArray(messages)
+    ? messages
+    : messages
+      ? [messages]
+      : [];
+  // Never mutate the caller's live SESSION_STATE.history.
+  const messageList = deepCloneForPayload(rawMessageList);
+
+  if (systemPrompt && String(systemPrompt).trim()) {
+    systemChunks.push(String(systemPrompt).trim());
+  }
+
+  for (const message of messageList) {
+    if (isFailedGemmaTurn(message)) continue;
+
+    const roleRaw =
+      message && typeof message === 'object' ? message.role : 'user';
+    const roleKey = String(roleRaw || 'user').trim().toLowerCase();
+
+    if (GEMMA_SYSTEM_ROLES.has(roleKey)) {
+      const systemText = extractGemmaParts(message, includeMedia)
+        .filter((part) => part.text)
+        .map((part) => part.text)
+        .join('\n\n')
+        .trim();
+      if (systemText) systemChunks.push(systemText);
+      continue;
+    }
+
+    const parts = extractGemmaParts(message, includeMedia);
+    if (!parts.length) continue;
+
+    const role = normaliseGemmaRole(roleRaw);
+    const last = turns[turns.length - 1];
+    if (last && last.role === role) {
+      last.parts = mergeGemmaParts(last.parts, parts);
+    } else {
+      turns.push({ role, parts });
+    }
+  }
+
+  // Bounded sliding window of the most recent valid turns. Drop a leading
+  // `model` turn so the payload still starts with `user`.
+  if (turns.length > MAX_GEMMA_HISTORY_TURNS) {
+    turns = turns.slice(-MAX_GEMMA_HISTORY_TURNS);
+  }
+  while (turns.length && turns[0].role !== 'user') {
+    turns.shift();
+  }
+
+  const systemText = systemChunks.filter(Boolean).join('\n\n').trim();
+  if (systemText) {
+    const firstUser = turns.find((turn) => turn.role === 'user');
+    if (firstUser) {
+      firstUser.parts = mergeGemmaParts([{ text: systemText }], firstUser.parts);
+    } else {
+      turns.unshift({ role: 'user', parts: [{ text: systemText }] });
+    }
+  }
+
+  // Gemma requires the first conversational turn to be `user`.
+  if (turns.length && turns[0].role !== 'user') {
+    turns.unshift({
+      role: 'user',
+      parts: [
+        {
+          text:
+            systemText ||
+            'Continue the institutional diligence session from the prior context.',
+        },
+      ],
+    });
+  }
+
+  return turns;
+}
+
+/**
+ * Build a sanitized multi-turn payload ending with the current user turn.
+ * The slide image is always placed before text parts, as Gemma requires.
+ */
+function buildGemmaContents(
+  history = [],
+  prompt = '',
+  imageBase64 = null,
+  mimeType = 'image/jpeg'
+) {
+  // History is always sanitized without media: only the final user turn may
+  // carry the slide image, so prior turns never replay base64 payloads.
+  const turns = sanitizeGeminiContents(history, '', false);
+  const currentParts = [];
+
+  if (hasValidImagePayload(imageBase64)) {
+    const inline = normaliseInlineData({
+      mime_type: mimeType,
+      data: imageBase64,
+    });
+    if (inline) currentParts.push({ inline_data: inline });
+  }
+  if (prompt && String(prompt).trim()) {
+    currentParts.push({ text: String(prompt) });
+  }
+
+  if (currentParts.length) {
+    const last = turns[turns.length - 1];
+    if (last && last.role === 'user') {
+      last.parts = mergeGemmaParts(last.parts, currentParts);
+    } else {
+      turns.push({ role: 'user', parts: currentParts });
+    }
+  }
+
+  // Keep the full request bounded even after appending the current turn.
+  if (turns.length > MAX_GEMMA_HISTORY_TURNS) {
+    turns.splice(0, turns.length - MAX_GEMMA_HISTORY_TURNS);
+  }
+  while (turns.length && turns[0].role !== 'user') {
+    turns.shift();
+  }
+
+  // Defensive: no historical turn can carry an inline image part.
+  for (let i = 0; i < turns.length - 1; i += 1) {
+    turns[i].parts = turns[i].parts.filter((part) => !part.inline_data);
+  }
+
+  if (!turns.length) return [];
+  if (turns[0].role !== 'user') {
+    turns.unshift({
+      role: 'user',
+      parts: [
+        {
+          text: 'Continue the institutional diligence session from the prior context.',
+        },
+      ],
+    });
+  }
+  if (turns[turns.length - 1].role !== 'user') {
+    turns.push({
+      role: 'user',
+      parts: [
+        {
+          text: 'Provide your next diligence inquiry based on the record above.',
+        },
+      ],
+    });
+  }
+
+  return turns;
+}
+
+/**
+ * Convert stored session turn records into sanitizer-ready chat messages.
+ */
+function buildSessionHistoryMessages(history = []) {
+  const messages = [];
+  for (const turn of Array.isArray(history) ? history : []) {
+    if (!turn || typeof turn !== 'object') continue;
+    const userMessage = String(turn.user_message || '').trim();
+    const vcResponse = String(turn.vc_spoken_response || '').trim();
+    if (userMessage) messages.push({ role: 'user', content: userMessage });
+    if (vcResponse) messages.push({ role: 'assistant', content: vcResponse });
+  }
+  return messages;
+}
+
+/**
+ * Strip every config field Gemma rejects and keep only safe generation options.
+ */
+function sanitizeGemmaConfig(config = {}) {
+  const safe = { ...(config || {}) };
+  for (const key of Object.keys(safe)) {
+    if (GEMMA_FORBIDDEN_CONFIG_KEYS.has(key)) delete safe[key];
+  }
+  if (typeof safe.temperature !== 'number') {
+    safe.temperature = DEFAULT_TEMPERATURE;
+  }
+  return safe;
+}
+
+function buildGemmaRequestBody(contents, config = {}) {
+  return {
+    contents: Array.isArray(contents) ? contents : [],
+    generationConfig: sanitizeGemmaConfig({
+      temperature: DEFAULT_TEMPERATURE,
+      ...(config || {}),
+    }),
+  };
+}
+
 /**
  * 3-Layer JSON Extractor (Zero Canned Fallbacks)
  */
@@ -153,13 +533,47 @@ function extractJsonSafely(rawText) {
 }
 
 /**
+ * True when the prior partner turn already carries the last question, which
+ * means the multi-turn `model` turn makes repeating it in the prompt redundant.
+ */
+function isLastQuestionInHistory(lastVcQuestion) {
+  const question = String(lastVcQuestion || '').trim();
+  const history = Array.isArray(SESSION_STATE.history)
+    ? SESSION_STATE.history
+    : [];
+  if (!question || !history.length) return false;
+
+  const lastTurn = history[history.length - 1];
+  if (!lastTurn || typeof lastTurn !== 'object') return false;
+  const priorResponse = String(lastTurn.vc_spoken_response || '').trim();
+  if (!priorResponse) return false;
+
+  const normalise = (value) =>
+    String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  return normalise(priorResponse).includes(normalise(question));
+}
+
+/**
  * Build the Senior Managing Partner Multimodal Interrogation Prompt
  */
-function buildInterrogationPrompt(userMessage, lastVcQuestion, claimLedger) {
+function buildInterrogationPrompt(
+  userMessage,
+  lastVcQuestion,
+  claimLedger,
+  lastQuestionInHistory = false
+) {
   const recentClaims = claimLedger.slice(-MAX_LEDGER_IN_PROMPT);
   const claimLedgerJson = recentClaims.length
     ? JSON.stringify(recentClaims, null, 2)
     : '[]';
+
+  // The multi-turn contents already replay the prior partner question as the
+  // immediately preceding `model` turn. Do not duplicate it inside the user
+  // text prompt; keep the explicit quote only as a no-history fallback.
+  const previousInquiryBlock =
+    lastQuestionInHistory && String(lastVcQuestion || '').trim()
+      ? '4. Previous Inquiry Asked by Partner: See the immediately preceding partner turn; assess whether it was answered directly.'
+      : `4. Previous Inquiry Asked by Partner: "${lastVcQuestion}"`;
 
   return `You are a Senior Managing Partner at an institutional Venture Capital firm conducting formal due diligence on a startup pitch.
 Maintain a composed, analytical, professional, and rigorous tone at all times. Never use slang, internet memes, "roast" language, or casual insults.
@@ -168,7 +582,7 @@ INPUTS PROVIDED TO YOU:
 1. Attached Slide Image: The presentation slide currently displayed on screen by the founder.
 2. Founder's Verbal/Written Statement: "${userMessage}"
 3. Prior Session Claim Ledger (from earlier slides/turns in this session only): ${claimLedgerJson}
-4. Previous Inquiry Asked by Partner: "${lastVcQuestion}"
+${previousInquiryBlock}
 
 YOUR ANALYTICAL MANDATE:
 1. INSPECT THE SLIDE IMAGE DIRECTLY: Read the exact title, sector, metrics, charts, and claims shown visually on the attached slide image.
@@ -310,9 +724,18 @@ function compileSkillMd() {
 }
 
 /**
- * Call Gemma 4 via Google Gemini REST API with multimodal image part BEFORE text prompt
+ * Call Gemma 4 via Google Gemini REST API with a sanitized multi-turn payload.
+ * History is normalised to strict `user` → `model` alternation; the current
+ * slide image and prompt form the final `user` turn (image part before text).
  */
-async function callGeminiCascade(prompt, imageBase64, mimeType, apiKey, env) {
+async function callGeminiCascade(
+  prompt,
+  imageBase64,
+  mimeType,
+  apiKey,
+  env,
+  history = []
+) {
   const cfg = resolveEnvConfig(env, { apiKey });
   if (!cfg.geminiApiKey) {
     throw new Error('GEMINI_API_KEY is missing in Cloudflare Worker secrets/environment.');
@@ -325,72 +748,119 @@ async function callGeminiCascade(prompt, imageBase64, mimeType, apiKey, env) {
     .filter(Boolean);
   const cascade = Array.from(new Set([primary, ...fallbacks, ...CLOUD_CASCADE]));
 
-  // Multimodal ordering rule: image part BEFORE text prompt
-  const parts = [];
-  if (imageBase64) {
-    parts.push({
-      inline_data: {
-        mime_type: mimeType || 'image/jpeg',
-        data: imageBase64,
-      },
-    });
-  }
-  parts.push({ text: prompt });
+  const contents = buildGemmaContents(history, prompt, imageBase64, mimeType);
 
   let lastError = null;
+  const startedAt = Date.now();
+
   for (const modelId of cascade) {
-    try {
-      const startT = Date.now();
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-        modelId
-      )}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-      const resp = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts }],
-          generationConfig: {
-            temperature: DEFAULT_TEMPERATURE,
-          },
-        }),
-      });
-
-      const latencyMs = Date.now() - startT;
-      const body = await resp.json();
-
-      if (!resp.ok) {
-        const errMsg = body?.error?.message || `HTTP ${resp.status}`;
-        throw new Error(errMsg);
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const remaining = GEMMA_TOTAL_BUDGET_MS - (Date.now() - startedAt);
+      if (remaining < GEMMA_MIN_ATTEMPT_MS) {
+        console.warn(
+          JSON.stringify({
+            event: 'gemma4_budget_exhausted',
+            model_id: modelId,
+            attempt: attempt + 1,
+            elapsed_ms: Date.now() - startedAt,
+          })
+        );
+        break;
       }
 
-      const rawText =
-        body?.candidates?.[0]?.content?.parts
-          ?.map((p) => p.text || '')
-          .join('') || '';
-      const parsed = extractJsonSafely(rawText);
-      parsed.model_id = modelId;
-      parsed.engine_used = `gemini_api/${modelId}`;
-      parsed.latency_ms = latencyMs;
+      // Leave at least a minimum window for the fallback model.
+      const attemptTimeoutMs = Math.max(
+        GEMMA_MIN_ATTEMPT_MS,
+        Math.min(GEMMA_REQUEST_TIMEOUT_MS, remaining - GEMMA_MIN_ATTEMPT_MS)
+      );
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), attemptTimeoutMs);
+      const attemptStart = Date.now();
 
-      console.log(
-        JSON.stringify({
-          event: 'gemma4_inference_success',
-          model_id: modelId,
-          latency_ms: latencyMs,
-          has_image: Boolean(imageBase64),
-        })
-      );
-      return parsed;
-    } catch (err) {
-      lastError = err;
-      console.warn(
-        JSON.stringify({
-          event: 'gemma4_model_retry',
-          model_id: modelId,
-          error: String(err?.message || err),
-        })
-      );
+      try {
+        const startT = Date.now();
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+          modelId
+        )}:generateContent?key=${encodeURIComponent(cfg.geminiApiKey)}`;
+
+        const resp = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildGemmaRequestBody(contents)),
+          signal: controller.signal,
+        });
+
+        const latencyMs = Date.now() - startT;
+        const body = await resp.json();
+
+        if (!resp.ok) {
+          const errMsg = body?.error?.message || `HTTP ${resp.status}`;
+          throw new Error(errMsg);
+        }
+
+        const rawText =
+          body?.candidates?.[0]?.content?.parts
+            ?.map((p) => p.text || '')
+            .join('') || '';
+        const parsed = extractJsonSafely(rawText);
+        parsed.model_id = modelId;
+        parsed.engine_used = `gemini_api/${modelId}`;
+        parsed.latency_ms = latencyMs;
+
+        console.log(
+          JSON.stringify({
+            event: 'gemma4_inference_success',
+            model_id: modelId,
+            latency_ms: latencyMs,
+            turns: contents.length,
+            has_image: hasValidImagePayload(imageBase64),
+          })
+        );
+        return parsed;
+      } catch (err) {
+        const elapsed = Date.now() - attemptStart;
+        const timedOut = err?.name === 'AbortError';
+        lastError = timedOut
+          ? new Error(
+              `Gemma request timed out after ${elapsed}ms (limit ${attemptTimeoutMs}ms)`
+            )
+          : err;
+
+        const remainingAfter = GEMMA_TOTAL_BUDGET_MS - (Date.now() - startedAt);
+
+        // Retry only fast 5xx/INTERNAL failures. A slow timeout has already
+        // consumed the window the fallback model needs.
+        if (
+          attempt === 0 &&
+          elapsed <= GEMMA_FAST_RETRY_THRESHOLD_MS &&
+          (isTransientGemmaError(lastError) || timedOut) &&
+          remainingAfter >= GEMMA_MIN_ATTEMPT_MS
+        ) {
+          console.warn(
+            JSON.stringify({
+              event: 'gemma4_transient_retry',
+              model_id: modelId,
+              error: String(lastError?.message || lastError),
+              retry_delay_ms: GEMMA_RETRY_DELAY_MS,
+            })
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, GEMMA_RETRY_DELAY_MS)
+          );
+          continue;
+        }
+
+        console.warn(
+          JSON.stringify({
+            event: 'gemma4_model_retry',
+            model_id: modelId,
+            error: String(lastError?.message || lastError),
+          })
+        );
+        break;
+      } finally {
+        clearTimeout(timeoutId);
+      }
     }
   }
 
@@ -429,10 +899,12 @@ async function pingProvider(provider, apiKey, env, ollamaModelOverride = '') {
       const resp = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: 'Respond only with {"ok": true}' }] }],
-          generationConfig: { temperature: 0.0, maxOutputTokens: 16 },
-        }),
+        body: JSON.stringify(
+          buildGemmaRequestBody(
+            [{ role: 'user', parts: [{ text: 'Respond only with {"ok": true}' }] }],
+            { temperature: 0.0, maxOutputTokens: 16 }
+          )
+        ),
       });
       const latencyMs = Date.now() - startT;
       if (!resp.ok) {
@@ -623,7 +1095,11 @@ export default {
         const prompt = buildInterrogationPrompt(
           userMessage,
           SESSION_STATE.last_vc_question,
-          SESSION_STATE.claim_ledger
+          SESSION_STATE.claim_ledger,
+          isLastQuestionInHistory(SESSION_STATE.last_vc_question)
+        );
+        const conversationHistory = buildSessionHistoryMessages(
+          SESSION_STATE.history
         );
 
         const result = await callGeminiCascade(
@@ -631,7 +1107,8 @@ export default {
           imageBase64,
           mimeType,
           activeKey,
-          env
+          env,
+          conversationHistory
         );
 
         const rawEval =

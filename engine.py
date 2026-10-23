@@ -19,6 +19,7 @@ SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -27,6 +28,7 @@ import re
 import time
 import urllib.error
 import urllib.request
+from copy import deepcopy
 from typing import Any, Optional
 
 from dotenv import load_dotenv
@@ -47,6 +49,16 @@ _CLOUD_CASCADE: list[str] = [
 
 _DEFAULT_TEMPERATURE: float = 0.3
 
+# ─── Gemma payload / timeout bounds ─────────────────────────────────────────
+# Keep the final `contents` payload bounded and leave enough of the Cloudflare
+# 100s gateway window for the fallback model to run after a primary failure.
+_MAX_GEMMA_HISTORY_TURNS: int = 10
+_GEMMA_TOTAL_BUDGET_SECONDS: float = 92.0
+_GEMMA_REQUEST_TIMEOUT_SECONDS: float = 70.0
+_GEMMA_MIN_ATTEMPT_SECONDS: float = 8.0
+_GEMMA_RETRY_DELAY_SECONDS: float = 0.35
+_GEMMA_FAST_RETRY_THRESHOLD_SECONDS: float = 15.0
+
 _DEFAULT_OLLAMA_HOST: str = "http://127.0.0.1:11434"
 _DEFAULT_OLLAMA_URL: str = "http://127.0.0.1:11434/api/chat"
 _DEFAULT_OLLAMA_TAGS_URL: str = "http://127.0.0.1:11434/api/tags"
@@ -63,6 +75,460 @@ def _clean_env(key: str, default: str = "") -> str:
     raw = os.environ.get(key) or default
     cleaned = str(raw).strip().strip("\"'").strip()
     return cleaned or default
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Gemma 4 Conversation Sanitizer (Gemini `v1beta` `contents` contract)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Gemma endpoints on the Generative Language API accept only `user` and `model`
+# roles, reject top-level `systemInstruction`, and reject `tools` / `toolConfig`
+# / `responseMimeType`. The helpers below convert any dialogue history into a
+# strictly alternating `user` → `model` sequence before every request.
+_GEMMA_SYSTEM_ROLES = {"system", "developer"}
+_GEMMA_FORBIDDEN_CONFIG_KEYS = {
+    "system_instruction",
+    "systemInstruction",
+    "tools",
+    "tool_config",
+    "toolConfig",
+    "response_mime_type",
+    "responseMimeType",
+    "response_schema",
+    "responseSchema",
+}
+_TRANSIENT_GEMMA_MARKERS = (
+    "internal error",
+    "internal",
+    "unavailable",
+    "overloaded",
+    "deadline exceeded",
+    "timed out",
+    "timeout",
+    "try again",
+    "http 500",
+    "http 502",
+    "http 503",
+    "http 504",
+)
+
+
+def _is_transient_gemma_error(exc: BaseException) -> bool:
+    """Detect transient Gemini 5xx/overload failures worth a single retry."""
+    text = str(exc).lower()
+    return any(marker in text for marker in _TRANSIENT_GEMMA_MARKERS)
+
+
+def _has_valid_image_payload(image_bytes: Any) -> bool:
+    """Return True only for a non-empty, actually attachable image payload."""
+    if image_bytes is None:
+        return False
+    if isinstance(image_bytes, str):
+        return bool(image_bytes.strip())
+    if isinstance(image_bytes, (bytes, bytearray, memoryview)):
+        return len(image_bytes) > 0
+    if isinstance(image_bytes, (list, tuple, dict)):
+        return bool(image_bytes)
+    return False
+
+
+def _normalise_inline_data(inline: Any) -> Optional[dict[str, Any]]:
+    """Return a valid inline-data part, or ``None`` for empty/malformed payloads.
+
+    This is the single guard that prevents null, empty, or malformed image
+    objects from ever reaching the Gemini request body.
+    """
+    if inline is None:
+        return None
+
+    if isinstance(inline, dict):
+        data = inline.get("data")
+        mime_type = inline.get("mime_type") or inline.get("mimeType")
+    else:
+        data = getattr(inline, "data", None)
+        mime_type = getattr(inline, "mime_type", None) or getattr(
+            inline, "mimeType", None
+        )
+
+    if isinstance(data, str):
+        if not data.strip():
+            return None
+    elif isinstance(data, (bytes, bytearray, memoryview)):
+        if len(data) == 0:
+            return None
+        data = bytes(data)
+    else:
+        return None
+
+    mime = str(mime_type or "image/jpeg").strip()
+    if not mime.lower().startswith("image/"):
+        mime = "image/jpeg"
+    return {"mime_type": mime, "data": data}
+
+
+def _normalise_gemma_role(role: Any) -> str:
+    """Map every provider role to the only two roles Gemma accepts."""
+    value = str(role or "").strip().lower()
+    if value in {"assistant", "model"}:
+        return "model"
+    return "user"
+
+
+def _is_failed_gemma_turn(message: Any) -> bool:
+    """Return True for error/empty structural turns that must never be replayed."""
+    if not isinstance(message, dict):
+        return False
+    if message.get("error"):
+        return True
+    if message.get("failed") is True:
+        return True
+    if message.get("ok") is False:
+        return True
+    role = str(message.get("role") or "").strip().lower()
+    return role in {"error", "tool", "function"}
+
+
+def _extract_gemma_parts(
+    message: Any, include_media: bool = True
+) -> list[dict[str, Any]]:
+    """Extract text/inline-data parts from OpenAI, Gemini, or SDK message shapes.
+
+    ``include_media`` is set to ``False`` for historical turns so a base64 slide
+    image is only ever attached to the current (final) user turn.
+    """
+    if message is None:
+        return []
+
+    if isinstance(message, str):
+        text = message.strip()
+        return [{"text": text}] if text else []
+
+    if isinstance(message, dict):
+        raw_parts = message.get("parts")
+        if raw_parts is None:
+            raw_parts = message.get("content")
+        if raw_parts is None:
+            raw_parts = message.get("text")
+    elif isinstance(message, types.Content):
+        raw_parts = list(message.parts or [])
+    else:
+        raw_parts = getattr(message, "parts", None)
+        if raw_parts is None:
+            raw_parts = getattr(message, "content", None)
+        if raw_parts is None:
+            raw_parts = [message]
+
+    if raw_parts is None:
+        return []
+    if isinstance(raw_parts, (str, bytes)) or not isinstance(raw_parts, (list, tuple)):
+        raw_parts = [raw_parts]
+
+    parts: list[dict[str, Any]] = []
+    for item in raw_parts:
+        if item is None:
+            continue
+        if isinstance(item, str):
+            text = item.strip()
+            if text:
+                parts.append({"text": text})
+            continue
+        if isinstance(item, dict):
+            text = item.get("text")
+            if text is not None and str(text).strip():
+                parts.append({"text": str(text).strip()})
+            if include_media:
+                inline = _normalise_inline_data(
+                    item.get("inline_data") or item.get("inlineData")
+                )
+                if inline is not None:
+                    parts.append({"inline_data": inline})
+            continue
+
+        # google.genai.types.Part and compatible SDK objects
+        text = getattr(item, "text", None)
+        if text is not None and str(text).strip():
+            parts.append({"text": str(text).strip()})
+        if include_media:
+            inline = _normalise_inline_data(getattr(item, "inline_data", None))
+            if inline is not None:
+                parts.append({"inline_data": inline})
+
+    return parts
+
+
+def _merge_gemma_parts(*groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Merge adjacent turns while keeping multimodal parts before text parts."""
+    combined = [part for group in groups for part in group]
+    media = [part for part in combined if part.get("inline_data")]
+    others = [
+        part for part in combined if not part.get("inline_data") and not part.get("text")
+    ]
+    texts = [
+        str(part["text"]).strip()
+        for part in combined
+        if part.get("text") and str(part["text"]).strip()
+    ]
+    merged: list[dict[str, Any]] = []
+    merged.extend(media)
+    merged.extend(others)
+    if texts:
+        merged.append({"text": "\n\n".join(texts)})
+    return merged
+
+
+def _sanitize_gemini_contents(
+    messages: Optional[list[Any]] = None,
+    system_prompt: str = "",
+    include_media: bool = False,
+) -> list[dict[str, Any]]:
+    """Normalise any message history into Gemma's strict `user`/`model` schema.
+
+    * Deep-clones the incoming history so the live ``SESSION_STATE`` record is
+      never mutated while folding or merging turns.
+    * Remaps ``assistant`` → ``model``.
+    * Folds ``system`` / ``developer`` messages into the first ``user`` turn.
+    * Drops failed, error, empty, tool, and function turns.
+    * Merges consecutive turns that resolve to the same role.
+    * Caps history to the most recent ``_MAX_GEMMA_HISTORY_TURNS`` turns.
+    * Guarantees the sanitized sequence starts with a ``user`` turn.
+
+    ``include_media`` defaults to ``False`` so inline image data from earlier
+    turns is stripped; only the caller's current user turn may carry a slide
+    image. The caller appends the current user turn, which guarantees the final
+    payload also ends with the latest ``user`` turn.
+    """
+    turns: list[dict[str, Any]] = []
+    system_chunks: list[str] = []
+
+    if messages is None:
+        message_list: list[Any] = []
+    elif isinstance(messages, (str, dict)) or not isinstance(
+        messages, (list, tuple)
+    ):
+        message_list = [messages]
+    else:
+        message_list = list(messages)
+
+    # Never mutate the caller's live session history.
+    try:
+        message_list = deepcopy(message_list)
+    except Exception:  # pragma: no cover - exotic SDK objects
+        message_list = list(message_list)
+
+    if system_prompt and str(system_prompt).strip():
+        system_chunks.append(str(system_prompt).strip())
+
+    for message in message_list:
+        if _is_failed_gemma_turn(message):
+            continue
+
+        role_raw = (
+            message.get("role")
+            if isinstance(message, dict)
+            else getattr(message, "role", "user")
+        )
+        role_key = str(role_raw or "user").strip().lower()
+
+        if role_key in _GEMMA_SYSTEM_ROLES:
+            system_text = "\n\n".join(
+                str(part["text"]).strip()
+                for part in _extract_gemma_parts(message, include_media=include_media)
+                if part.get("text")
+            ).strip()
+            if system_text:
+                system_chunks.append(system_text)
+            continue
+
+        parts = _extract_gemma_parts(message, include_media=include_media)
+        if not parts:
+            continue
+
+        role = _normalise_gemma_role(role_raw)
+        if turns and turns[-1]["role"] == role:
+            turns[-1]["parts"] = _merge_gemma_parts(turns[-1]["parts"], parts)
+        else:
+            turns.append({"role": role, "parts": parts})
+
+    # Bounded sliding window of the most recent valid turns. Drop a leading
+    # `model` turn so the payload still starts with `user`.
+    if len(turns) > _MAX_GEMMA_HISTORY_TURNS:
+        turns = turns[-_MAX_GEMMA_HISTORY_TURNS:]
+    while turns and turns[0]["role"] != "user":
+        turns.pop(0)
+
+    system_text = "\n\n".join(chunk for chunk in system_chunks if chunk).strip()
+    if system_text:
+        first_user = next((turn for turn in turns if turn["role"] == "user"), None)
+        if first_user is not None:
+            first_user["parts"] = _merge_gemma_parts(
+                [{"text": system_text}], first_user["parts"]
+            )
+        else:
+            turns.insert(0, {"role": "user", "parts": [{"text": system_text}]})
+
+    # Gemma requires the first conversational turn to be `user`.
+    if turns and turns[0]["role"] != "user":
+        turns.insert(
+            0,
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": system_text
+                        or "Continue the institutional diligence session from the prior context."
+                    }
+                ],
+            },
+        )
+
+    return turns
+
+
+def _build_gemma_contents(
+    history: Optional[list[Any]],
+    prompt: str,
+    image_bytes: Optional[bytes],
+    mime_type: str,
+) -> list[dict[str, Any]]:
+    """Build a sanitized multi-turn payload ending with the current user turn.
+
+    Historical turns are stripped of inline media and capped to the most recent
+    valid turns. Only the current turn may carry the slide image, and only when
+    the payload is genuinely non-empty (Turn 0 text-only chat stays text-only).
+    """
+    turns = _sanitize_gemini_contents(history, include_media=False)
+
+    current_parts: list[dict[str, Any]] = []
+    image_payload = (
+        _normalise_inline_data({"mime_type": mime_type, "data": image_bytes})
+        if _has_valid_image_payload(image_bytes)
+        else None
+    )
+    if image_payload is not None:
+        current_parts.append({"inline_data": image_payload})
+    if prompt and str(prompt).strip():
+        current_parts.append({"text": str(prompt)})
+
+    if current_parts:
+        if turns and turns[-1]["role"] == "user":
+            turns[-1]["parts"] = _merge_gemma_parts(turns[-1]["parts"], current_parts)
+        else:
+            turns.append({"role": "user", "parts": current_parts})
+
+    # Keep the full request bounded even after appending the current turn.
+    if len(turns) > _MAX_GEMMA_HISTORY_TURNS:
+        turns = turns[-_MAX_GEMMA_HISTORY_TURNS:]
+    while turns and turns[0]["role"] != "user":
+        turns.pop(0)
+
+    # Defensive: historical turns can never carry media (only the final turn).
+    for turn in turns[:-1]:
+        turn["parts"] = [part for part in turn["parts"] if not part.get("inline_data")]
+
+    if turns and turns[0]["role"] != "user":
+        turns.insert(
+            0,
+            {
+                "role": "user",
+                "parts": [
+                    {"text": "Continue the institutional diligence session from the prior context."}
+                ],
+            },
+        )
+    if turns and turns[-1]["role"] != "user":
+        turns.append(
+            {
+                "role": "user",
+                "parts": [
+                    {"text": "Provide your next diligence inquiry based on the record above."}
+                ],
+            }
+        )
+
+    return turns
+
+
+def _to_genai_contents(turns: list[dict[str, Any]]) -> list[types.Content]:
+    """Convert sanitized turn dictionaries into typed `google-genai` contents."""
+    contents: list[types.Content] = []
+    for turn in turns:
+        parts: list[types.Part] = []
+        for part in turn.get("parts", []):
+            if "inline_data" in part:
+                inline = _normalise_inline_data(part.get("inline_data"))
+                if inline is None:
+                    continue
+                data = inline["data"]
+                if isinstance(data, str):
+                    try:
+                        data = base64.b64decode(data)
+                    except Exception:
+                        data = b""
+                if data:
+                    parts.append(
+                        types.Part.from_bytes(
+                            data=data,
+                            mime_type=inline["mime_type"],
+                        )
+                    )
+                continue
+            if part.get("text"):
+                parts.append(types.Part(text=str(part["text"])))
+        if parts:
+            contents.append(types.Content(role=turn["role"], parts=parts))
+    return contents
+
+
+def _session_history_to_messages(history: Optional[list[Any]]) -> list[dict[str, Any]]:
+    """Convert stored session turn records into sanitizer-ready chat messages."""
+    messages: list[dict[str, Any]] = []
+    for turn in history or []:
+        if not isinstance(turn, dict):
+            continue
+        user_message = str(turn.get("user_message") or "").strip()
+        vc_response = str(turn.get("vc_spoken_response") or "").strip()
+        if user_message:
+            messages.append({"role": "user", "content": user_message})
+        if vc_response:
+            messages.append({"role": "assistant", "content": vc_response})
+    return messages
+
+
+def _gemma_generation_config(
+    overrides: Optional[dict[str, Any]] = None,
+) -> types.GenerateContentConfig:
+    """Build a Gemma-safe generation config.
+
+    Gemma endpoints reject `systemInstruction`, `tools`, `toolConfig`, and
+    `responseMimeType`; any such keys supplied by a caller are removed here.
+    """
+    safe = dict(overrides or {})
+    for key in list(safe):
+        if key in _GEMMA_FORBIDDEN_CONFIG_KEYS:
+            safe.pop(key, None)
+    safe.setdefault("temperature", _DEFAULT_TEMPERATURE)
+    return types.GenerateContentConfig(**safe)
+
+
+def _gemma_timeout_config(attempt_timeout: float) -> types.GenerateContentConfig:
+    """Build a Gemma config with SDK retries disabled and a hard HTTP timeout.
+
+    The per-request bounds only apply the ``http_options`` override when the
+    installed ``google-genai`` version exposes it; the surrounding
+    ``asyncio.wait_for`` remains the authoritative outer bound.
+    """
+    http_options_cls = getattr(types, "HttpOptions", None)
+    retry_options_cls = getattr(types, "HttpRetryOptions", None)
+    if http_options_cls is not None:
+        http_kwargs: dict[str, Any] = {"timeout": int(attempt_timeout * 1000)}
+        if retry_options_cls is not None:
+            http_kwargs["retry_options"] = retry_options_cls(attempts=1)
+        try:
+            return _gemma_generation_config(
+                {"http_options": http_options_cls(**http_kwargs)}
+            )
+        except Exception:  # pragma: no cover - older SDK without http_options
+            logger.debug("google-genai version does not accept http_options.")
+    return _gemma_generation_config()
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -142,6 +608,7 @@ class Gemma4Router:
         provider: str = "gemini_api",
         api_key_override: Optional[str] = None,
         ollama_model_override: Optional[str] = None,
+        history: Optional[list[Any]] = None,
     ) -> dict[str, Any]:
         """Run live inference against the selected provider and return parsed JSON."""
         active_api_key = self._resolve_api_key(api_key_override)
@@ -154,6 +621,7 @@ class Gemma4Router:
                 image_bytes=image_bytes,
                 mime_type=mime_type,
                 active_api_key=active_api_key,
+                history=history,
             )
 
         if provider == "ollama":
@@ -309,17 +777,26 @@ class Gemma4Router:
         image_bytes: Optional[bytes],
         mime_type: str,
         active_api_key: str,
+        history: Optional[list[Any]] = None,
     ) -> dict[str, Any]:
-        """Call Gemma 4 directly via ``google-genai`` without unsupported config flags."""
+        """Call Gemma 4 directly via ``google-genai`` without unsupported config flags.
+
+        Multi-turn history is sanitized to Gemma's strict ``user``/``model``
+        contract before the current multimodal user turn is appended.
+        """
         if not active_api_key:
             raise RuntimeError("GEMINI_API_KEY is missing in .env")
 
         client = genai.Client(api_key=active_api_key)
 
-        contents: list[Any] = []
-        if image_bytes:
-            contents.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
-        contents.append(prompt)
+        history_messages = _session_history_to_messages(history)
+        sanitized_turns = _build_gemma_contents(
+            history_messages,
+            prompt,
+            image_bytes,
+            mime_type,
+        )
+        contents = _to_genai_contents(sanitized_turns)
 
         env_primary = _clean_env("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it")
         env_fallbacks = (
@@ -341,42 +818,95 @@ class Gemma4Router:
                 cascade.append(default_m)
 
         last_error: Optional[Exception] = None
+        deadline = time.monotonic() + _GEMMA_TOTAL_BUDGET_SECONDS
 
         for model_id in cascade:
-            try:
-                start_t = time.time()
-                # Call Gemma 4 directly without unsupported config parameters that trigger 400 errors
-                response = client.models.generate_content(
-                    model=model_id,  # Default: "gemma-4-26b-a4b-it", cascade to "gemma-4-31b-it"
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        temperature=_DEFAULT_TEMPERATURE,
+            for attempt in range(2):
+                remaining = deadline - time.monotonic()
+                if remaining < _GEMMA_MIN_ATTEMPT_SECONDS:
+                    logger.warning(
+                        "Gemma timeout budget exhausted before %s attempt %d; stopping cascade.",
+                        model_id,
+                        attempt + 1,
+                    )
+                    break
+
+                # Leave at least a minimum window for the fallback model.
+                attempt_timeout = min(
+                    _GEMMA_REQUEST_TIMEOUT_SECONDS,
+                    max(
+                        _GEMMA_MIN_ATTEMPT_SECONDS,
+                        remaining - _GEMMA_MIN_ATTEMPT_SECONDS,
                     ),
                 )
-                latency_ms = int((time.time() - start_t) * 1000)
+                attempt_started = time.monotonic()
 
-                raw_text = response.text or ""
-                result = extract_json_safely(raw_text)
-                result["engine_used"] = f"gemini_api/{model_id}"
-                result["model_id"] = model_id
-                result["latency_ms"] = latency_ms
+                try:
+                    # Gemma rejects systemInstruction, tools, toolConfig, and
+                    # responseMimeType; the timeout config strips them all,
+                    # disables SDK retries, and applies a hard HTTP timeout.
+                    config = _gemma_timeout_config(attempt_timeout)
+                    response = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            client.models.generate_content,
+                            model=model_id,  # Default: "gemma-4-26b-a4b-it", cascade to "gemma-4-31b-it"
+                            contents=contents,
+                            config=config,
+                        ),
+                        timeout=attempt_timeout,
+                    )
+                    latency_ms = int((time.monotonic() - attempt_started) * 1000)
 
-                logger.info(
-                    "Gemma 4 cloud inference succeeded: model=%s latency=%dms",
-                    model_id,
-                    latency_ms,
-                )
-                return result
+                    raw_text = response.text or ""
+                    result = extract_json_safely(raw_text)
+                    result["engine_used"] = f"gemini_api/{model_id}"
+                    result["model_id"] = model_id
+                    result["latency_ms"] = latency_ms
 
-            except Exception as exc:
-                last_error = exc
-                logger.warning(
-                    "Model %s failed (%s) — cascading to next Gemma 4 model.",
-                    model_id,
-                    exc,
-                )
+                    logger.info(
+                        "Gemma 4 cloud inference succeeded: model=%s latency=%dms turns=%d",
+                        model_id,
+                        latency_ms,
+                        len(contents),
+                    )
+                    return result
 
-        raise RuntimeError(f"Gemini API connection/inference failed across {cascade}: {last_error}")
+                except Exception as exc:
+                    elapsed = time.monotonic() - attempt_started
+                    if isinstance(exc, asyncio.TimeoutError):
+                        exc = TimeoutError(
+                            f"Gemma request timed out after {elapsed * 1000:.0f}ms "
+                            f"(limit {attempt_timeout * 1000:.0f}ms)"
+                        )
+                    last_error = exc
+
+                    # Retry only fast 5xx/INTERNAL failures. A slow timeout has
+                    # already consumed the window the fallback model needs.
+                    if (
+                        attempt == 0
+                        and elapsed <= _GEMMA_FAST_RETRY_THRESHOLD_SECONDS
+                        and _is_transient_gemma_error(exc)
+                        and deadline - time.monotonic() >= _GEMMA_MIN_ATTEMPT_SECONDS
+                    ):
+                        logger.warning(
+                            "Transient Gemma failure on %s (%s); retrying once in %.0fms.",
+                            model_id,
+                            exc,
+                            _GEMMA_RETRY_DELAY_SECONDS * 1000,
+                        )
+                        await asyncio.sleep(_GEMMA_RETRY_DELAY_SECONDS)
+                        continue
+
+                    logger.warning(
+                        "Model %s failed (%s) — cascading to next Gemma 4 model.",
+                        model_id,
+                        exc,
+                    )
+                    break
+
+        raise RuntimeError(
+            f"Gemini API connection/inference failed across {cascade}: {last_error}"
+        )
 
     # ── Local Ollama inference (NO cloud fallback) ──────────────────────────
     async def _ollama(
